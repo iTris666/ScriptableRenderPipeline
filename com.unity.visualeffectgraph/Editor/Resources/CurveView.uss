@@ -1,0 +1,23 @@
+CurveView
+{
+    flex-direction:column;
+}
+
+CurveView > #splitter, #curve-container > *
+{
+    position-type:absolute;
+    position-top:0;
+    position-left:0;
+    position-right:0;
+    position-bottom:0;
+    flex-direction:row;
+}
+
+CurveView > #splitter > #custom-list
+{
+    flex: 2 0 auto;
+}
+CurveView > #splitter > #curve-container
+{
+    flex: 8 0 auto;
+}

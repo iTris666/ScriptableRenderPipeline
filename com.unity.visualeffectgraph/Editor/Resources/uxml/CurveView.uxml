@@ -1,0 +1,6 @@
+<UXML xmlns:ui="UnityEngine.Experimental.UIElements" xmlns:ed="UnityEditor.Experimental.UIElements">
+  <ed:VisualSplitter name="splitter">
+    <ui:VisualElement name="custom-list" pickingMode="Ignore" />
+    <ui:VisualElement name="curve-container" pickingMode="Ignore" />
+  </ed:VisualSplitter>
+</UXML>

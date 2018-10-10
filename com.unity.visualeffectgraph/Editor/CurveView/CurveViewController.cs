@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.VFX;
 using UnityEditor.VFX.UI;
+using System.Collections.ObjectModel;
 
 namespace UnityEditor.VFX.CurveView
 {
@@ -36,6 +37,11 @@ namespace UnityEditor.VFX.CurveView
         }
 
         List<CurveController> m_CurveControllers = new List<CurveController>();
+
+        public ReadOnlyCollection<CurveController> curveControllers
+        {
+            get { return m_CurveControllers.AsReadOnly(); }
+        }
     }
 
     class CurveController : Controller, ICurveHandle

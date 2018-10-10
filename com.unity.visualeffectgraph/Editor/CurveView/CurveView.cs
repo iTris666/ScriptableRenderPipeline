@@ -11,6 +11,12 @@ namespace UnityEditor.VFX.CurveView
 {
     class CurveViewWindow : EditorWindow
     {
+
+        [MenuItem("Window/Rendering/Curve View")]
+        public static void CreateCurveView()
+        {
+            EditorWindow.GetWindow<CurveViewWindow>();
+        }
         CurveView m_CurveView;
 
         public void OnEnable()
@@ -47,17 +53,54 @@ namespace UnityEditor.VFX.CurveView
 
         public void OnControllerChanged(ref ControllerChangedEvent e)
         {
-            
+            foreach (var curve in m_Curves.Keys.Except(controller.curveControllers))
+            {
+                CurveDisplay removedCurve = m_Curves[curve];
+
+                removedCurve.RemoveFromHierarchy();
+            }
+
+            foreach (var curve in controller.curveControllers.Except(m_Curves.Keys))
+            {
+                CurveDisplay newCurve = new CurveDisplay();
+
+                newCurve.controller = curve;
+                m_Curves[curve] = newCurve;
+
+                m_CurveContainer.Add(newCurve);
+            }
         }
+
+        Dictionary<CurveController, CurveDisplay> m_Curves= new Dictionary<CurveController, CurveDisplay>();
+
+        public CurveView()
+        {
+            var uxml = Resources.Load<VisualTreeAsset>("uxml/CurveView");
+            uxml.CloneTree(this, null);
+
+            m_CurveContainer = this.Query("curve-container");
+            var newController = new CurveViewController();
+
+            newController.AddCurve(AnimationCurve.EaseInOut(0, 0, 1, 1), null);
+            newController.AddCurve(AnimationCurve.Linear(0, 0, 1, 1), null);
+
+            AddStyleSheetPath("CurveView");
+
+            controller = newController;
+        }
+
+        VisualElement m_CurveContainer;
     }
 
     class CurveDisplay : VisualElement, IControlledElement<CurveController>
     {
 
-        CurveDisplay()
+        public CurveDisplay()
         {
             m_Content = this;
             m_CurrentCurveResolution = 0;
+
+            curveColor = Color.green;
         }
         CurveController m_Controller;
 
@@ -85,7 +128,7 @@ namespace UnityEditor.VFX.CurveView
 
         protected override void DoRepaint(IStylePainter painter)
         {
-            FillCurveData(128,false);
+            FillCurveData(16,false);
 
             if (s_Mat == null)
             {
@@ -159,6 +202,7 @@ namespace UnityEditor.VFX.CurveView
 
             Vector3[] vertices = m_Mesh.vertices;
             Vector3[] normals = m_Mesh.normals;
+            int[] indices = null;
             if (askedResolution != m_CurrentCurveResolution || force)
             {
                 m_CurrentCurveResolution = askedResolution;
@@ -220,7 +264,12 @@ namespace UnityEditor.VFX.CurveView
                 }
 
                 //fill triangle indices as it is a triangle strip
-                int[] indices = new int[(m_CurrentCurveResolution * 2 - 2) * 3];
+                indices = m_Mesh.triangles;
+                if( indices == null || indices.Length != (m_CurrentCurveResolution * 2 - 2) * 3)
+                {
+                    indices = new int[(m_CurrentCurveResolution * 2 - 2) * 3];
+                }
+                
 
                 for (int i = 0; i < m_CurrentCurveResolution * 2 - 2; ++i)
                 {
@@ -238,11 +287,26 @@ namespace UnityEditor.VFX.CurveView
                     }
                 }
 
-                m_Mesh.triangles = indices;
 
             }
 
-            Vector3 scale = new Vector3(m_Content.layout.width, m_Content.layout.height);
+            float width = m_Content.layout.width;
+            if ( 0 > width || float.IsNaN(width))
+            {
+                width = 1;
+            }
+            float height = m_Content.layout.height;
+            if( 0 > height || float.IsNaN(height))
+            {
+                height = 1;
+            }
+            if (vertices == null || vertices.Length != m_CurrentCurveResolution * 2)
+            {
+                vertices = new Vector3[m_CurrentCurveResolution * 2];
+                normals = new Vector3[m_CurrentCurveResolution * 2];
+            }
+
+            Vector3 scale = new Vector3(width,height);
 
             vertices[0] = vertices[1] = Vector3.Scale(new Vector3(0, 1 - Mathf.InverseLerp(m_MinValue, m_MaxValue, m_ValueCache[0]), 0), scale);
 
@@ -280,11 +344,13 @@ namespace UnityEditor.VFX.CurveView
 
             m_Mesh.vertices = vertices;
             m_Mesh.normals = normals;
+            if( indices != null)
+                m_Mesh.triangles = indices;
         }
 
         public void OnControllerChanged(ref ControllerChangedEvent e)
         {
-            FillCurveData(128, true);
+            FillCurveData(16, true);
         }
     }
 }
