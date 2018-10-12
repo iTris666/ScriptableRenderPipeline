@@ -12,18 +12,29 @@ namespace UnityEditor.VFX.CurveView
     {
         void ApplyToCurve(AnimationCurve curve);
     }
+
+    interface IUserCurve
+    {
+        string name { get; }
+
+        Color defaultColor { get; }
+
+        AnimationCurve curve { get; }
+
+        void OnCurveChanged(AnimationCurve newValue);
+    }
+
     class CurveViewController : Controller
     {
-        public ICurveHandle AddCurve(AnimationCurve curve, Action<ICurveHandle> onCurveChanged)
+        public void AddCurve(IUserCurve curve)
         {
-            var controller = new CurveController(curve,onCurveChanged);
+            var controller = new CurveController(curve);
             m_CurveControllers.Add(controller);
-            return controller;
         }
 
-        public void RemoveCurve(ICurveHandle handle)
+        public void RemoveCurve(IUserCurve handle)
         {
-            m_CurveControllers.Remove(handle as CurveController);
+            m_CurveControllers.RemoveAt(m_CurveControllers.FindIndex(t =>t.userCurve == handle));
         }
 
         public override void ApplyChanges()
@@ -47,38 +58,47 @@ namespace UnityEditor.VFX.CurveView
     class CurveController : Controller, ICurveHandle
     {
 
-        public AnimationCurve curve
+        public string name
         {
-            get { return m_Curve; }
+            get { return m_UserCurve.name; }
         }
 
-        void CopyCurve(AnimationCurve source, AnimationCurve target)
+        public AnimationCurve curve
+        {
+            get { return m_UserCurve.curve; }
+        }
+
+        public static void CopyCurve(AnimationCurve source, AnimationCurve target)
         {
             target.keys = source.keys;
             target.postWrapMode = source.postWrapMode;
             target.preWrapMode = source.preWrapMode;
         }
 
-        AnimationCurve m_Curve;
+        IUserCurve m_UserCurve;
+        AnimationCurve m_Cache;
 
         Action<ICurveHandle> m_OnChanged;
 
-        public CurveController(AnimationCurve curve, Action<ICurveHandle> onChanged)
-        {
-            m_Curve = new AnimationCurve();
-            m_OnChanged = onChanged;
+        public IUserCurve userCurve { get { return m_UserCurve; } }
 
-            CopyCurve(curve, m_Curve);
+        public CurveController(IUserCurve curve)
+        {
+            m_Cache = new AnimationCurve();
+            m_UserCurve = curve;
+
+            CopyCurve(curve.curve, m_Cache);
         }
 
         public void ApplyToCurve(AnimationCurve curve)
         {
-            CopyCurve(m_Curve, curve);
+            CopyCurve(m_Cache, curve);
         }
 
         public override void ApplyChanges()
         {
             NotifyChange(AnyThing);
+            m_UserCurve.OnCurveChanged(m_Cache);
         }
     }
 }

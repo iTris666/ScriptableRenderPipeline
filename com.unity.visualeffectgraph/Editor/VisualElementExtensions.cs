@@ -42,17 +42,17 @@ static class VisualElementExtensions
             visualElement.styleSheets.Add(sheet);
     }
 
-    public static void AddStyleSheetPathWithSkinVariant(this VisualElement visualElement, string path)
+    public static void AddStyleSheetPathWithSkinVariant(this VisualElement visualElement, string path, bool useStandardSkin = false)
     {
         visualElement.AddStyleSheetPath(path);
-        //if (true)
+        if (EditorGUIUtility.isProSkin || !useStandardSkin)
         {
             visualElement.AddStyleSheetPath(path + "Dark");
         }
-        /*else
+        else
         {
             visualElement.AddStyleSheetPath(path + "Light");
-        }*/
+        }
     }
 
     public static void ResetPositionProperties(this VisualElement visualElement)

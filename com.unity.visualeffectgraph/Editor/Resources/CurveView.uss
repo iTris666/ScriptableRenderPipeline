@@ -20,4 +20,12 @@ CurveView > #splitter > #custom-list
 CurveView > #splitter > #curve-container
 {
     flex: 8 0 auto;
+    border-left-width:1;
+}
+
+#key
+{
+    position-type:absolute;
+    width:7;
+    height:7;
 }

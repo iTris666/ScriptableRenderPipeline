@@ -31,6 +31,27 @@ namespace UnityEditor.VFX.CurveView
 
     class CurveView : VisualElement, IControlledElement<CurveViewController>
     {
+        class Curve : IUserCurve
+        {
+            public string name { get { return "curve"; } }
+
+            public AnimationCurve curve { get { return m_Curve; } }
+
+            public Color defaultColor { get { return Color.red; } }
+
+            public void OnCurveChanged(AnimationCurve newValue)
+            {
+                CurveController.CopyCurve(newValue, m_Curve);
+            }
+
+            public Curve(AnimationCurve curve)
+            {
+                m_Curve = curve;
+            }
+
+            AnimationCurve m_Curve;
+        }
+
         CurveViewController m_Controller;
 
         public CurveViewController controller
@@ -81,10 +102,10 @@ namespace UnityEditor.VFX.CurveView
             m_CurveContainer = this.Query("curve-container");
             var newController = new CurveViewController();
 
-            newController.AddCurve(AnimationCurve.EaseInOut(0, 0, 1, 1), null);
-            newController.AddCurve(AnimationCurve.Linear(0, 0, 1, 1), null);
+            newController.AddCurve(new Curve(AnimationCurve.EaseInOut(0, 0, 1, 1)));
+            newController.AddCurve(new Curve(AnimationCurve.Linear(0, 0, 1, 1)));
 
-            AddStyleSheetPath("CurveView");
+            this.AddStyleSheetPathWithSkinVariant("CurveView",true);
 
             controller = newController;
         }
@@ -101,6 +122,8 @@ namespace UnityEditor.VFX.CurveView
             m_CurrentCurveResolution = 0;
 
             curveColor = Color.green;
+
+            RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
         }
         CurveController m_Controller;
 
@@ -291,12 +314,12 @@ namespace UnityEditor.VFX.CurveView
             }
 
             float width = m_Content.layout.width;
-            if ( 0 > width || float.IsNaN(width))
+            if ( 1 > width || float.IsNaN(width))
             {
                 width = 1;
             }
             float height = m_Content.layout.height;
-            if( 0 > height || float.IsNaN(height))
+            if( 1 > height || float.IsNaN(height))
             {
                 height = 1;
             }
@@ -348,9 +371,59 @@ namespace UnityEditor.VFX.CurveView
                 m_Mesh.triangles = indices;
         }
 
+        List<VisualElement> m_Keys = new List<VisualElement>();
+
+
+        void OnGeometryChanged(GeometryChangedEvent e)
+        {
+            UpdateKeys();
+        }
+
         public void OnControllerChanged(ref ControllerChangedEvent e)
         {
-            FillCurveData(16, true);
+            if (!float.IsNaN(layout.width))
+                FillCurveData(16, true);
+            var keys = controller.curve.keys;
+            int keyCount = keys.Length;
+
+            while (m_Keys.Count < keyCount)
+            {
+                var newKey = new VisualElement() { name = "key" };
+                m_Keys.Add(newKey);
+                Add(newKey);
+            }
+            while (m_Keys.Count > keyCount)
+            {
+                m_Keys[m_Keys.Count - 1].RemoveFromHierarchy();
+                m_Keys.RemoveAt(m_Keys.Count - 1);
+            }
+
+            UpdateKeys();
+
+        }
+
+        void UpdateKeys()
+        {
+            var keys = controller.curve.keys;
+            int keyCount = keys.Length;
+
+            Rect bounds = contentRect;
+
+            float timeStart = keys[0].time;
+            float timeEnd = keys[keys.Length -1].time;
+            float length = timeEnd - timeStart;
+
+            float maxValue = keys.Select(t => t.value).Max();
+            float minValue = keys.Select(t => t.value).Min();
+            float range = maxValue - minValue;
+
+            for (int i = 0; i < controller.curve.keys.Length; ++i)
+            {
+                float timeNormalized = (controller.curve.keys[i].time - timeStart) / length;
+                m_Keys[i].style.positionLeft = timeNormalized * bounds.width - m_Keys[i].style.width * 0.5f;
+                float valueNormalized =  (controller.curve.keys[i].value - minValue) / range;
+                m_Keys[i].style.positionTop = bounds.height - valueNormalized * bounds.height - m_Keys[i].style.height * 0.5f;
+            }
         }
     }
 }
