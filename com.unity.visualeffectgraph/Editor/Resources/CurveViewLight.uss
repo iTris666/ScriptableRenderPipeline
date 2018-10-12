@@ -1,0 +1,9 @@
+CurveView > #splitter > #curve-container
+{
+    border-color: #999999;
+    
+}
+#key
+{
+    background-color:#000;
+}
