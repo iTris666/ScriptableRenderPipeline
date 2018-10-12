@@ -242,7 +242,7 @@ namespace UnityEditor.VFX.UI
                     }
                 }
                 else
-                    CreateTemplateSystem(path, mPos, groupNode);
+                CreateTemplateSystem(path, mPos, groupNode);
             }
             else if (d.modelDescriptor is GroupNodeAdder)
             {
@@ -351,7 +351,11 @@ namespace UnityEditor.VFX.UI
             m_ToggleComponentBoard.text = "Target GameObject";
             m_ToggleComponentBoard.RegisterCallback<ChangeEvent<bool>>(ToggleComponentBoard);
             m_Toolbar.Add(m_ToggleComponentBoard);
-
+ Toggle toggleCustomAttributesBoard = new ToolbarToggle();
+            toggleCustomAttributesBoard.text = "Custom Attributes";
+            toggleCustomAttributesBoard.AddToClassList("toolbarItem");
+            toggleCustomAttributesBoard.RegisterCallback<ChangeEvent<bool>>(ToggleCustomAttributeBoard);
+            m_Toolbar.Add(toggleCustomAttributesBoard);
             var showDebugMenu = new ToolbarMenu();
             showDebugMenu.text = "Advanced";
             showDebugMenu.menu.AppendAction("Runtime Mode (Forced)", OnRuntimeModeChanged, RuntimeModeStatus);
@@ -381,10 +385,15 @@ namespace UnityEditor.VFX.UI
             toggleBlackboard.value = blackboardVisible;
 
             /*
-            bool componentBoardVisible = BoardPreferenceHelper.IsVisible(BoardPreferenceHelper.Board.blackboard, false);
+            bool componentBoardVisible = BoardPreferenceHelper.IsVisible(BoardPreferenceHelper.Board.componentBoard, false);
             if (componentBoardVisible)
                 ShowComponentBoard();
             toggleComponentBoard.value = componentBoardVisible;*/
+
+            bool customAttributeBoardVisible = BoardPreferenceHelper.IsVisible(BoardPreferenceHelper.Board.customAttributeBoard, false);
+            if (customAttributeBoardVisible)
+                ShowCustomAttributeBoard();
+            toggleCustomAttributesBoard.value = customAttributeBoardVisible;
 
             Add(m_Toolbar);
 
@@ -487,12 +496,36 @@ namespace UnityEditor.VFX.UI
             m_ToggleComponentBoard.SetValueWithoutNotify(true);
         }
 
+        void ShowCustomAttributeBoard()
+        {
+            if (m_CustomAttributeBoard == null)
+            {
+                m_CustomAttributeBoard = new VFXCustomAttributesBoard(this);
+
+                m_CustomAttributeBoard.controller = controller;
+            }
+            Insert(childCount - 1, m_CustomAttributeBoard);
+
+            BoardPreferenceHelper.SetVisible(BoardPreferenceHelper.Board.customAttributeBoard, true);
+
+            m_CustomAttributeBoard.RegisterCallback<GeometryChangedEvent>(OnCustomAttributeBoardGeometryChanged);
+        }
+
         void OnFirstComponentBoardGeometryChanged(GeometryChangedEvent e)
         {
             if (m_FirstResize)
             {
                 m_ComponentBoard.ValidatePosition();
                 m_ComponentBoard.UnregisterCallback<GeometryChangedEvent>(OnFirstComponentBoardGeometryChanged);
+            }
+        }
+
+        void OnCustomAttributeBoardGeometryChanged(GeometryChangedEvent e)
+        {
+            if (m_FirstResize)
+            {
+                m_CustomAttributeBoard.ValidatePosition();
+                m_CustomAttributeBoard.UnregisterCallback<GeometryChangedEvent>(OnCustomAttributeBoardGeometryChanged);
             }
         }
 
@@ -512,6 +545,8 @@ namespace UnityEditor.VFX.UI
             m_FirstResize = true;
             if (m_ComponentBoard != null)
                 m_ComponentBoard.ValidatePosition();
+            if (m_CustomAttributeBoard != null)
+                m_CustomAttributeBoard.ValidatePosition();
             if (m_Blackboard != null)
                 m_Blackboard.ValidatePosition();
 
@@ -530,6 +565,19 @@ namespace UnityEditor.VFX.UI
                 m_ComponentBoard.RemoveFromHierarchy();
                 BoardPreferenceHelper.SetVisible(BoardPreferenceHelper.Board.componentBoard, false);
                 m_ToggleComponentBoard.SetValueWithoutNotify(false);
+            }
+        }
+
+        void ToggleCustomAttributeBoard(ChangeEvent<bool> e)
+        {
+            if (m_CustomAttributeBoard == null || m_CustomAttributeBoard.parent == null)
+            {
+                ShowCustomAttributeBoard();
+            }
+            else
+            {
+                m_CustomAttributeBoard.RemoveFromHierarchy();
+                BoardPreferenceHelper.SetVisible(BoardPreferenceHelper.Board.customAttributeBoard, false);
             }
         }
 
@@ -1144,17 +1192,17 @@ namespace UnityEditor.VFX.UI
         }
 
         public EventPropagation ReinitComponents()
-        {
+            {
             foreach (var component in GetActiveComponents())
                 component.Reinit();
             return EventPropagation.Stop;
-        }
+            }
 
         public EventPropagation ReinitAndPlayComponents()
         {
             foreach (var component in GetActiveComponents())
             {
-                component.Reinit();
+                    component.Reinit();
                 component.Play();
             }
             return EventPropagation.Stop;
@@ -1260,7 +1308,7 @@ namespace UnityEditor.VFX.UI
             else if (change.elementsToRemove != null)
             {
                 controller.Remove(change.elementsToRemove.OfType<IControlledElement>().Where(t => t.controller != null).Select(t => t.controller));
-
+                
                 foreach( var dataEdge in change.elementsToRemove.OfType<VFXDataEdge>())
                 {
                     RemoveElement(dataEdge);
@@ -1431,6 +1479,7 @@ namespace UnityEditor.VFX.UI
 
 
         VFXComponentBoard m_ComponentBoard;
+        VFXCustomAttributesBoard m_CustomAttributeBoard;
 
         public readonly Vector2 defaultPasteOffset = new Vector2(100, 100);
         public Vector2 pasteOffset = Vector2.zero;
@@ -1784,48 +1833,48 @@ namespace UnityEditor.VFX.UI
                 border.controller = controller.systems[m_Systems.Count() - 1];
             }
         }
-
+        
         void OnDragUpdated(DragUpdatedEvent e)
         {
             if (DragAndDrop.GetGenericData("DragSelection") != null && selection.Any(t => t is VFXBlackboardField && (t as VFXBlackboardField).GetFirstAncestorOfType<VFXBlackboardRow>() != null))
-            {
+        {
                 VFXBlackboardField selectedField = selection.OfType<VFXBlackboardField>().Where(t => t.GetFirstAncestorOfType<VFXBlackboardRow>() != null).First();
 
                 if( selectedField.controller.isOutput &&selectedField.controller.nodeCount > 0 )
-                {
+        {
                     return;
-                }
+        }
 
                 DragAndDrop.visualMode = DragAndDropVisualMode.Link;
                 e.StopPropagation();
-            }
+        }
             else
-            {
+        {
                 var references = DragAndDrop.objectReferences.OfType<VisualEffectAsset>().Cast<VisualEffectObject>().Concat(DragAndDrop.objectReferences.OfType<VisualEffectSubgraphOperator>());
                 VisualEffectObject draggedObject = references.FirstOrDefault();
                 bool isOperator = draggedObject is VisualEffectSubgraphOperator;
 
                 if (draggedObject != null && draggedObject != controller.model.visualEffectObject)
-                {
+            {
                     var draggedObjectDependencies = draggedObject.GetResource().GetOrCreateGraph().subgraphDependencies;
                     bool vfxIntovfx = !isOperator && !controller.model.isSubgraph && !draggedObjectDependencies.Contains(controller.model.subgraph); // dropping a vfx into a vfx
                     bool operatorIntovfx = isOperator && !controller.model.isSubgraph; //dropping an operator into a vfx
                     bool operatorIntoOperator = isOperator && controller.model.visualEffectObject is VisualEffectSubgraphOperator && !draggedObjectDependencies.Contains(controller.model.visualEffectObject); //dropping an operator into a vfx
                     if (vfxIntovfx || operatorIntovfx || operatorIntoOperator)
-                    {
-                        DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+        {
+            DragAndDrop.visualMode = DragAndDropVisualMode.Link;
                         e.StopPropagation();
                     }
                     return;
-                }
+        }
 
                 var droppedBlocks = DragAndDrop.objectReferences.OfType<VisualEffectSubgraphBlock>();
                 if (droppedBlocks.Count() > 0 && !controller.model.isSubgraph )
-                {
-                    DragAndDrop.visualMode = DragAndDropVisualMode.Link;
-                    e.StopPropagation();
-                }
+            {
+                DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+                e.StopPropagation();
             }
+        }
         }
 
 
@@ -1835,15 +1884,15 @@ namespace UnityEditor.VFX.UI
 
             if (DragAndDrop.GetGenericData("DragSelection") != null && selection.Any(t => t is BlackboardField && (t as BlackboardField).GetFirstAncestorOfType<VFXBlackboardRow>() != null))
             {
-                var rows = selection.OfType<BlackboardField>().Select(t => t.GetFirstAncestorOfType<VFXBlackboardRow>()).Where(t => t != null).ToArray();
-                if (rows.Length > 0)
-                {
+            var rows = selection.OfType<BlackboardField>().Select(t => t.GetFirstAncestorOfType<VFXBlackboardRow>()).Where(t => t != null).ToArray();
+            if (rows.Length > 0)
+            {
                     DragAndDrop.AcceptDrag();
-                    Vector2 mousePosition = contentViewContainer.WorldToLocal(e.mousePosition);
-                    foreach (var row in rows)
-                    {
-                        AddVFXParameter(mousePosition - new Vector2(50, 20), row.controller, groupNode);
-                    }
+                Vector2 mousePosition = contentViewContainer.WorldToLocal(e.mousePosition);
+                foreach (var row in rows)
+                {
+                    AddVFXParameter(mousePosition - new Vector2(50, 20), row.controller, groupNode);
+                }
                     e.StopPropagation();
                 }
             }
