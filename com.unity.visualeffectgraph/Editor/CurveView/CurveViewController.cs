@@ -57,6 +57,10 @@ namespace UnityEditor.VFX.CurveView
 
     class CurveController : Controller, ICurveHandle
     {
+        public class Change
+        {
+            public const int Color = 1;
+        }
 
         public string name
         {
@@ -86,9 +90,23 @@ namespace UnityEditor.VFX.CurveView
         {
             m_Cache = new AnimationCurve();
             m_UserCurve = curve;
+            m_Color = curve.defaultColor;
 
             CopyCurve(curve.curve, m_Cache);
         }
+
+        Color m_Color;
+
+        public Color color
+        {
+            get{return m_Color;}
+            set
+            {
+                m_Color = value;
+                NotifyChange(Change.Color);
+            }
+        }
+
 
         public void ApplyToCurve(AnimationCurve curve)
         {
