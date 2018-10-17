@@ -21,6 +21,7 @@ CurveView > #splitter > #curve-container
 {
     flex: 8 0 auto;
     border-left-width:1;
+    overflow:hidden;
 }
 
 #key

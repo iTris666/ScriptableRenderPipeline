@@ -290,6 +290,11 @@ namespace UnityEditor.VFX.CurveView
             UpdateKeys();
         }
 
+        public void OffsetChanged()
+        {
+            UpdateKeys();
+        }
+
         public void OnControllerChanged(ref ControllerChangedEvent e)
         {
             if (!float.IsNaN(layout.width))
@@ -336,9 +341,9 @@ namespace UnityEditor.VFX.CurveView
             for (int i = 0; i < controller.curve.keys.Length; ++i)
             {
                 float timeNormalized = (controller.curve.keys[i].time - timeStart) / length;
-                m_Keys[i].style.positionLeft = timeNormalized * scale.x - m_Keys[i].style.width * 0.5f;
+                m_Keys[i].style.positionLeft = timeNormalized * scale.x - m_Keys[i].style.width * 0.5f + m_View.offset.x;
                 float valueNormalized =  (controller.curve.keys[i].value - minValue) / range - 0.5f;
-                m_Keys[i].style.positionTop = height*0.5f - valueNormalized * scale.y - m_Keys[i].style.height * 0.5f;
+                m_Keys[i].style.positionTop = height*0.5f - valueNormalized * scale.y - m_Keys[i].style.height * 0.5f + m_View.offset.y;
             }
         }
     }

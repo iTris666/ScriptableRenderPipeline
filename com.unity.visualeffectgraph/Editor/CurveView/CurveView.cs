@@ -124,6 +124,44 @@ namespace UnityEditor.VFX.CurveView
 
 
             RegisterCallback<WheelEvent>(OnWheel);
+
+            RegisterCallback<MouseDownEvent>(OnMouseDown);
+            RegisterCallback<MouseUpEvent>(OnMouseUp);
+        }
+
+        Vector2 m_StartDrag;
+        Vector2 m_StartOffset;
+        bool m_Dragging;
+
+        void OnMouseDown(MouseDownEvent e)
+        {
+            if(e.clickCount == 1 && ((e.button == 0 && e.altKey && ! e.shiftKey && !e.actionKey ) ||(e.button == 2 && !e.altKey && !e.shiftKey && !e.actionKey)))
+            {
+                if( !m_Dragging) // just in case we lost a MouseUp event prevent the event from beeing registered twice
+                    RegisterCallback<MouseMoveEvent>(OnMouseMove);
+                m_Dragging = true;
+                m_StartDrag = e.mousePosition;
+                m_StartOffset = m_Offset;
+            }
+        }
+
+        void OnMouseUp(MouseUpEvent e)
+        {
+            m_Dragging = false;
+            UnregisterCallback<MouseMoveEvent>(OnMouseMove);
+        }
+
+        void OnMouseMove(MouseMoveEvent e)
+        {
+            m_Offset = m_StartOffset + e.mousePosition - m_StartDrag;
+
+
+            if (m_Offset.x > 0)
+                m_Offset.x = 0;
+            foreach (var curve in m_Curves.Values)
+            {
+                curve.OffsetChanged();
+            }
         }
 
         void OnWheel(WheelEvent e)

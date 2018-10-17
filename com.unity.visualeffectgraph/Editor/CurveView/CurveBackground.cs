@@ -26,15 +26,15 @@ namespace UnityEditor.VFX.CurveView
             }
         }
 
-        Mesh m_LinesMesh;
+        Mesh m_HorizontalLinesMesh;
 
         public CurveBackground()
         {
-            m_LinesMesh = new Mesh();
+            m_HorizontalLinesMesh = new Mesh();
 
-            m_LinesMesh.vertices = new Vector3[] { new Vector3(0, 0.5f, 0), new Vector3(1, 0.5f, 0) };
-            m_LinesMesh.colors32 = new Color32[] { Color.black, Color.black };
-            m_LinesMesh.SetIndices(new int[] { 0, 1 }, MeshTopology.Lines, 0);
+            m_HorizontalLinesMesh.vertices = new Vector3[] { new Vector3(0, 0.5f, 0), new Vector3(1, 0.5f, 0) };
+            m_HorizontalLinesMesh.colors32 = new Color32[] { Color.black, Color.black };
+            m_HorizontalLinesMesh.SetIndices(new int[] { 0, 1 }, MeshTopology.Lines, 0);
             
             if (s_Mat == null)
             {
@@ -50,7 +50,7 @@ namespace UnityEditor.VFX.CurveView
 
             s_Mat.SetPass(0);
 
-            Graphics.DrawMeshNow(m_LinesMesh, Matrix4x4.Scale(new Vector3(width, height, 0)));
+            Graphics.DrawMeshNow(m_HorizontalLinesMesh, Matrix4x4.TRS(new Vector3(0,view.offset.y,0),Quaternion.identity,new Vector3(width, height, 0)));
         }
     }
 }
