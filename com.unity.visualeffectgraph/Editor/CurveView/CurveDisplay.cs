@@ -48,7 +48,7 @@ namespace UnityEditor.VFX.CurveView
 
         protected override void DoRepaint(IStylePainter painter)
         {
-            FillCurveData(16,false);
+            FillCurveData((int)(layout.width / 4), false);
 
             if (s_Mat == null)
             {
@@ -189,7 +189,10 @@ namespace UnityEditor.VFX.CurveView
                 {
                     indices = new int[(m_CurrentCurveResolution * 2 - 2) * 3];
                 }
-                
+
+                m_Mesh.triangles = null;
+
+
 
                 for (int i = 0; i < m_CurrentCurveResolution * 2 - 2; ++i)
                 {
@@ -299,7 +302,7 @@ namespace UnityEditor.VFX.CurveView
             if (e.change != CurveController.Change.Color)
             {
                 if (!float.IsNaN(layout.width))
-                    FillCurveData(16, true);
+                    FillCurveData((int)(layout.width / 4), true);
                 var keys = controller.curve.keys;
                 int keyCount = keys.Length;
 
