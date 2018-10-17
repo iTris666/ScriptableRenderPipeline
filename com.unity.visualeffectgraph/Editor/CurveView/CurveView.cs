@@ -139,7 +139,7 @@ namespace UnityEditor.VFX.CurveView
                 curve.ScaleChanged();
             }
         }
-
+        CurveBackground m_CurveBackground;
         VisualElement m_CurveContainer;
     }
 }

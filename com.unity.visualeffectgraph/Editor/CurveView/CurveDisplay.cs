@@ -75,6 +75,7 @@ namespace UnityEditor.VFX.CurveView
 
             s_Mat.SetPass(0);
 
+            //Graphics.DrawMeshNow(m_Mesh, Matrix4x4.Translate(new Vector3(0,contentRect.height * 0.5f,0)));
             Graphics.DrawMeshNow(m_Mesh, Matrix4x4.identity);
         }
 
@@ -226,13 +227,19 @@ namespace UnityEditor.VFX.CurveView
                 normals = new Vector3[m_CurrentCurveResolution * 2];
             }
 
-            Vector2 scale = m_View.scale * width ;
-            Vector2 offset = m_View.offset + new Vector2(0, height*0.5f);
+            Vector2 scale = m_View.scale;
+            scale.x *= width;
+            scale.y *= height;
+            Vector3 offset = m_View.offset + new Vector2(0, height*0.5f);
 
-            vertices[0] = vertices[1] = Vector3.Scale(new Vector3(0, 1 - Mathf.InverseLerp(m_MinValue, m_MaxValue, m_ValueCache[0]), 0), scale) + new Vector3(offset.x,offset.y,0);
+            Func<int,Vector3> valueLambda = i => Vector3.Scale(new Vector3(Mathf.InverseLerp(startTime, endTime, m_TimeCache[i]), 0.5f - Mathf.InverseLerp(m_MinValue, m_MaxValue, m_ValueCache[i]), 0), scale);
 
-            Vector3 secondPoint = Vector2.Scale(new Vector2(1.0f / m_CurrentCurveResolution, 1 - Mathf.InverseLerp(m_MinValue, m_MaxValue, m_ValueCache[1])), scale);
-            Vector3 prevDir = (secondPoint - vertices[0]).normalized;
+            Vector3 secondPoint = valueLambda(1);
+            Vector3 firstPoint = valueLambda(0);
+            vertices[0] = vertices[1] = firstPoint + new Vector3(offset.x, offset.y, 0);
+            Vector3 prevDir = (secondPoint - firstPoint).normalized;
+
+
 
             Vector3 norm = new Vector3(prevDir.y, -prevDir.x, 1);
 
@@ -245,7 +252,7 @@ namespace UnityEditor.VFX.CurveView
             {
                 vertices[i * 2] = vertices[i * 2 + 1] = currentPoint + new Vector3(offset.x,offset.y,0);
 
-                Vector3 nextPoint = Vector2.Scale(new Vector2(Mathf.InverseLerp(startTime, endTime, m_TimeCache[i + 1]), 1 - Mathf.InverseLerp(m_MinValue, m_MaxValue, m_ValueCache[i + 1])), scale);
+                Vector3 nextPoint = valueLambda(i+1);
 
                 Vector3 nextDir = (nextPoint - currentPoint).normalized;
                 Vector3 dir = (prevDir + nextDir).normalized;
@@ -322,13 +329,15 @@ namespace UnityEditor.VFX.CurveView
             float minValue = keys.Select(t => t.value).Min();
             float range = maxValue - minValue;
 
-            Vector2 scale = m_View.scale * width;
+            Vector2 scale = m_View.scale;
+            scale.x *= width;
+            scale.y *= height;
 
             for (int i = 0; i < controller.curve.keys.Length; ++i)
             {
                 float timeNormalized = (controller.curve.keys[i].time - timeStart) / length;
                 m_Keys[i].style.positionLeft = timeNormalized * scale.x - m_Keys[i].style.width * 0.5f;
-                float valueNormalized =  (controller.curve.keys[i].value - minValue) / range;
+                float valueNormalized =  (controller.curve.keys[i].value - minValue) / range - 0.5f;
                 m_Keys[i].style.positionTop = height*0.5f - valueNormalized * scale.y - m_Keys[i].style.height * 0.5f;
             }
         }
