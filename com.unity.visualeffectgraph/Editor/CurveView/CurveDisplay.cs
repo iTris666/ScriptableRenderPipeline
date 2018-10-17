@@ -74,8 +74,7 @@ namespace UnityEditor.VFX.CurveView
             s_Mat.SetColor("_Color", (QualitySettings.activeColorSpace == ColorSpace.Linear) ? curveColor.gamma : curveColor);
 
             s_Mat.SetPass(0);
-
-            //Graphics.DrawMeshNow(m_Mesh, Matrix4x4.Translate(new Vector3(0,contentRect.height * 0.5f,0)));
+            
             Graphics.DrawMeshNow(m_Mesh, Matrix4x4.identity);
         }
 
@@ -297,24 +296,29 @@ namespace UnityEditor.VFX.CurveView
 
         public void OnControllerChanged(ref ControllerChangedEvent e)
         {
-            if (!float.IsNaN(layout.width))
-                FillCurveData(16, true);
-            var keys = controller.curve.keys;
-            int keyCount = keys.Length;
-
-            while (m_Keys.Count < keyCount)
+            if (e.change != CurveController.Change.Color)
             {
-                var newKey = new VisualElement() { name = "key" };
-                m_Keys.Add(newKey);
-                Add(newKey);
-            }
-            while (m_Keys.Count > keyCount)
-            {
-                m_Keys[m_Keys.Count - 1].RemoveFromHierarchy();
-                m_Keys.RemoveAt(m_Keys.Count - 1);
+                if (!float.IsNaN(layout.width))
+                    FillCurveData(16, true);
+                var keys = controller.curve.keys;
+                int keyCount = keys.Length;
+
+                while (m_Keys.Count < keyCount)
+                {
+                    var newKey = new VisualElement() { name = "key" };
+                    m_Keys.Add(newKey);
+                    Add(newKey);
+                }
+                while (m_Keys.Count > keyCount)
+                {
+                    m_Keys[m_Keys.Count - 1].RemoveFromHierarchy();
+                    m_Keys.RemoveAt(m_Keys.Count - 1);
+                }
+
+                UpdateKeys();
             }
 
-            UpdateKeys();
+            curveColor = controller.color;
 
         }
 

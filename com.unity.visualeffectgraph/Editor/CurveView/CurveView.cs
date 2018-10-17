@@ -36,19 +36,21 @@ namespace UnityEditor.VFX.CurveView
 
             public AnimationCurve curve { get { return m_Curve; } }
 
-            public Color defaultColor { get { return Color.red; } }
+            public Color defaultColor { get { return m_Color; } }
 
             public void OnCurveChanged(AnimationCurve newValue)
             {
                 CurveController.CopyCurve(newValue, m_Curve);
             }
 
-            public Curve(AnimationCurve curve)
+            public Curve(AnimationCurve curve,Color defaultColor)
             {
                 m_Curve = curve;
+                m_Color = defaultColor;
             }
 
             AnimationCurve m_Curve;
+            Color m_Color;
         }
 
         CurveViewController m_Controller;
@@ -115,8 +117,8 @@ namespace UnityEditor.VFX.CurveView
             m_CurveContainer = this.Query("curve-container");
             var newController = new CurveViewController();
 
-            newController.AddCurve(new Curve(AnimationCurve.EaseInOut(0, 0, 1, 1)));
-            newController.AddCurve(new Curve(AnimationCurve.Linear(0, 0, 1, 1)));
+            newController.AddCurve(new Curve(AnimationCurve.EaseInOut(0, 0, 1, 1),Color.red));
+            newController.AddCurve(new Curve(AnimationCurve.Linear(0, 0, 1, 1),Color.yellow));
 
             this.AddStyleSheetPathWithSkinVariant("CurveView",true);
 
