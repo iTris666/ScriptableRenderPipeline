@@ -222,6 +222,9 @@ namespace UnityEditor.VFX.UI
             foreach (var outEdge in m_FlowOutputConnectorContainer.Children().OfType<VFXFlowAnchor>().SelectMany(t => t.connections))
                 outEdge.UpdateEdgeControl();
 
+            VisualElement nodeBorder = this.Q(name: "node-border");
+            nodeBorder.cacheAsBitmap = false;
+
             RefreshContext();
         }
 
