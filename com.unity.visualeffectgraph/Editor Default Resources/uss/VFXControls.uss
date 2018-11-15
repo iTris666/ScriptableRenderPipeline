@@ -138,3 +138,8 @@ CurveField > *
 {
     margin-top:0px;
 }
+
+#unity-text-input
+{
+    -unity-text-align:middle-left;
+}
