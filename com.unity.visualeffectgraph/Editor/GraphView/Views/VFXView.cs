@@ -1,36 +1,22 @@
 //#define OLD_COPY_PASTE
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEditor.VFX;
-using UnityEngine.VFX;
+using UnityEditor.Experimental.VFX;
+using UnityEngine.Experimental.VFX;
 using UnityEngine.UIElements;
-using UnityEditor.UIElements;
 using UnityEngine.Profiling;
 using System.Reflection;
-using UnityEditor.VersionControl;
 
 using PositionType = UnityEngine.UIElements.Position;
 
 namespace UnityEditor.VFX.UI
 {
-    class VFXViewModicationProcessor : UnityEditor.AssetModificationProcessor
-    {
-        public static bool assetMoved = false;
-
-        private static AssetMoveResult OnWillMoveAsset(string sourcePath, string destinationPath)
-        {
-            assetMoved = true;
-            return AssetMoveResult.DidNotMove;
-        }
-    }
-
-    class VFXView : GraphView, IControlledElement<VFXViewController>, IControllerListener
+    class VFXView : GraphView, IDropTarget, IControlledElement<VFXViewController>, IControllerListener
     {
         public HashSet<VFXEditableDataAnchor> allDataAnchors = new HashSet<VFXEditableDataAnchor>();
 
@@ -54,7 +40,6 @@ namespace UnityEditor.VFX.UI
             get { return m_Controller; }
         }
 
-        public Button checkoutButton;
 
         void DisconnectController()
         {
@@ -126,25 +111,8 @@ namespace UnityEditor.VFX.UI
             elementsRemovedFromGroup = ElementRemovedFromGroupNode;
             groupTitleChanged = GroupNodeTitleChanged;
 
-            m_NodeProvider = new VFXNodeProvider(controller, (d, mPos) => AddNode(d, mPos),null, GetAcceptedTypeNodes());
-
-            //Make sure a subgraph block as a block subgraph  context
-            if (controller.model.isSubgraph && controller.model.subgraph is VisualEffectSubgraphBlock)
-            {
-                if( !controller.graph.children.Any(t=>t is VFXBlockSubgraphContext) )
-                {
-                    controller.graph.AddChild(VFXBlockSubgraphContext.CreateInstance<VFXBlockSubgraphContext>(),0);
-                }
-            }
+            m_NodeProvider = new VFXNodeProvider(controller, (d, mPos) => AddNode(d, mPos));
         }
-
-        IEnumerable<Type> GetAcceptedTypeNodes()
-        {
-            if (!controller.model.isSubgraph)
-                return null;
-            return new Type[] { typeof(VFXOperator) };
-        }
-
 
         public VisualEffect attachedComponent
         {
@@ -166,11 +134,6 @@ namespace UnityEditor.VFX.UI
         {
             foreach (var edge in dataEdges.Where(t => t.Value.input == anchor || t.Value.output == anchor).ToArray())
             {
-                if (edge.Value.input == anchor)
-                    edge.Value.output.Disconnect(edge.Value);
-                else
-                    edge.Value.input.Disconnect(edge.Value);
-
                 RemoveElement(edge.Value);
                 dataEdges.Remove(edge.Key);
             }
@@ -225,23 +188,6 @@ namespace UnityEditor.VFX.UI
             {
                 string path = d.modelDescriptor as string;
 
-                if(! path.StartsWith(VisualEffectAssetEditorUtility.templatePath) )
-                {
-                    if( Path.GetExtension(path) == VisualEffectSubgraphOperator.Extension)
-                    {
-                        var subGraph = AssetDatabase.LoadAssetAtPath<VisualEffectSubgraphOperator>(path);
-                        if (subGraph != null && (!controller.model.isSubgraph || !subGraph.GetResource().GetOrCreateGraph().subgraphDependencies.Contains(controller.model.subgraph) && subGraph.GetResource() != controller.model))
-                        {
-                            ;
-                            VFXModel newModel = VFXSubgraphOperator.CreateInstance<VFXSubgraphOperator>() as VFXModel;
-
-                            controller.AddVFXModel(mPos, newModel);
-
-                            newModel.SetSettingValue("m_Subgraph", subGraph);
-                        }
-                    }
-                }
-                else
                 CreateTemplateSystem(path, mPos, groupNode);
             }
             else if (d.modelDescriptor is GroupNodeAdder)
@@ -260,29 +206,8 @@ namespace UnityEditor.VFX.UI
         }
 
         VFXNodeProvider m_NodeProvider;
+
         VisualElement m_Toolbar;
-
-        private bool m_IsRuntimeMode = false;
-        private bool m_ForceShaderValidation = false;
-
-
-        public static StyleSheet LoadStyleSheet(string text)
-        {
-            string path = string.Format("{0}/Editor Default Resources/uss/{1}.uss", VisualEffectGraphPackageInfo.assetPackagePath, text);
-            return AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
-        }
-
-        public static VisualTreeAsset LoadUXML(string text)
-        {
-            string path = string.Format("{0}/Editor Default Resources/uxml/{1}.uxml", VisualEffectGraphPackageInfo.assetPackagePath, text);
-            return AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(path);
-        }
-
-        public static Texture2D LoadImage(string text)
-        {
-            string path = string.Format("{0}/Editor Default Resources/VFX/{1}.png", VisualEffectGraphPackageInfo.assetPackagePath, text);
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-        }
 
         public VFXView()
         {
@@ -294,11 +219,7 @@ namespace UnityEditor.VFX.UI
             this.AddManipulator(new RectangleSelector());
             this.AddManipulator(new FreehandSelector());
 
-            styleSheets.Add(LoadStyleSheet("VFXView"));
-            if( ! EditorGUIUtility.isProSkin)
-            {
-                styleSheets.Add(LoadStyleSheet("VFXView-light"));
-            }
+            styleSheets.Add(Resources.Load<StyleSheet>("VFXView"));
 
             AddLayer(-1);
             AddLayer(1);
@@ -306,65 +227,74 @@ namespace UnityEditor.VFX.UI
 
             focusable = true;
 
-            m_Toolbar = new UnityEditor.UIElements.Toolbar();
+            m_Toolbar = new VisualElement();
+            m_Toolbar.AddToClassList("toolbar");
 
-            var toggleAutoCompile = new ToolbarToggle();
-            toggleAutoCompile.text = "Auto";
-            toggleAutoCompile.style.unityTextAlign = TextAnchor.MiddleRight;
-            toggleAutoCompile.SetValueWithoutNotify(true);
-            toggleAutoCompile.RegisterCallback<ChangeEvent<bool>>(OnToggleCompile);
-            m_Toolbar.Add(toggleAutoCompile);
 
-            var compileButton = new ToolbarButton(OnCompile);
-            compileButton.style.unityTextAlign = TextAnchor.MiddleLeft;
-            compileButton.text = "Compile";
-            m_Toolbar.Add(compileButton);
+            Button button = new Button(() => { Resync(); });
+            button.text = "Refresh";
+            button.AddToClassList("toolbarItem");
+            m_Toolbar.Add(button);
+            button = new Button(() => { SelectAsset(); });
+            button.text = "Select Asset";
+            button.AddToClassList("toolbarItem");
+            m_Toolbar.Add(button);
 
-            var spacer = new ToolbarSpacer();
-            spacer.style.width = 12f;
-            m_Toolbar.Add(spacer);
-
-            var selectAssetButton = new ToolbarButton(() => { SelectAsset(); });
-            selectAssetButton.text = "Show in Project";
-            m_Toolbar.Add(selectAssetButton);
-
-            spacer = new ToolbarSpacer();
+            VisualElement spacer = new VisualElement();
             spacer.style.width = 10;
             m_Toolbar.Add(spacer);
 
-            checkoutButton = new ToolbarButton(() => { Checkout(); });
-            checkoutButton.text = "Check Out";
-            checkoutButton.visible = false;
-            checkoutButton.AddToClassList("toolbarItem");
-            m_Toolbar.Add(checkoutButton);
-
-            var flexSpacer = new ToolbarSpacer();
-            flexSpacer.style.flexGrow = 1f;
-            m_Toolbar.Add(flexSpacer);
-
-            var toggleBlackboard = new ToolbarToggle();
+            Toggle toggleBlackboard = new Toggle();
             toggleBlackboard.text = "Blackboard";
+            toggleBlackboard.AddToClassList("toolbarItem");
             toggleBlackboard.RegisterCallback<ChangeEvent<bool>>(ToggleBlackboard);
             m_Toolbar.Add(toggleBlackboard);
 
-            m_ToggleComponentBoard = new ToolbarToggle();
+            m_ToggleComponentBoard = new Toggle();
             m_ToggleComponentBoard.text = "Target GameObject";
+            m_ToggleComponentBoard.AddToClassList("toolbarItem");
             m_ToggleComponentBoard.RegisterCallback<ChangeEvent<bool>>(ToggleComponentBoard);
             m_Toolbar.Add(m_ToggleComponentBoard);
- Toggle toggleCustomAttributesBoard = new ToolbarToggle();
+
+            Toggle toggleCustomAttributesBoard = new Toggle();
             toggleCustomAttributesBoard.text = "Custom Attributes";
             toggleCustomAttributesBoard.AddToClassList("toolbarItem");
             toggleCustomAttributesBoard.RegisterCallback<ChangeEvent<bool>>(ToggleCustomAttributeBoard);
             m_Toolbar.Add(toggleCustomAttributesBoard);
-            var showDebugMenu = new ToolbarMenu();
-            showDebugMenu.text = "Advanced";
-            showDebugMenu.menu.AppendAction("Runtime Mode (Forced)", OnRuntimeModeChanged, RuntimeModeStatus);
-            showDebugMenu.menu.AppendAction("Shader Validation (Forced)", OnShaderValidationChanged, ShaderValidationStatus);
-            showDebugMenu.menu.AppendSeparator();
-            showDebugMenu.menu.AppendAction("Refresh UI", OnRefreshUI, DropdownMenuAction.Status.Normal);
-            m_Toolbar.Add(showDebugMenu);
 
-            // End Toolbar
+            spacer = new VisualElement();
+            spacer.style.flexGrow = 1f;
+            m_Toolbar.Add(spacer);
+
+            Toggle toggleRuntimeMode = new Toggle();
+            toggleRuntimeMode.text = "Force Runtime Mode";
+            toggleRuntimeMode.SetValueWithoutNotify(m_IsRuntimeMode);
+            toggleRuntimeMode.RegisterCallback<ChangeEvent<bool>>(OnToggleRuntimeMode);
+            m_Toolbar.Add(toggleRuntimeMode);
+            toggleRuntimeMode.AddToClassList("toolbarItem");
+
+            if (VFXGraphCompiledData.k_FnVFXResource_SetCompileInitialVariants != null)
+            {
+                Toggle toogleForceShaderValidation = new Toggle();
+                toogleForceShaderValidation.text = "Force Shader Validation";
+                toogleForceShaderValidation.SetValueWithoutNotify(m_ForceShaderValidation);
+                toogleForceShaderValidation.RegisterCallback<ChangeEvent<bool>>(OnToggleForceShaderValidation);
+                m_Toolbar.Add(toogleForceShaderValidation);
+                toogleForceShaderValidation.AddToClassList("toolbarItem");
+            }
+
+            Toggle toggleAutoCompile = new Toggle();
+            toggleAutoCompile.text = "Auto Compile";
+            toggleAutoCompile.SetValueWithoutNotify(true);
+            toggleAutoCompile.RegisterCallback<ChangeEvent<bool>>(OnToggleCompile);
+            m_Toolbar.Add(toggleAutoCompile);
+            toggleAutoCompile.AddToClassList("toolbarItem");
+
+            button = new Button(OnCompile);
+            button.text = "Compile";
+            button.AddToClassList("toolbarItem");
+            m_Toolbar.Add(button);
+
 
             m_NoAssetLabel = new Label("Please Select An Asset");
             m_NoAssetLabel.style.position = PositionType.Absolute;
@@ -379,12 +309,14 @@ namespace UnityEditor.VFX.UI
             Add(m_NoAssetLabel);
 
             m_Blackboard = new VFXBlackboard(this);
+
+
             bool blackboardVisible = BoardPreferenceHelper.IsVisible(BoardPreferenceHelper.Board.blackboard, true);
             if (blackboardVisible)
                 Add(m_Blackboard);
             toggleBlackboard.value = blackboardVisible;
 
-            /*
+/*
             bool componentBoardVisible = BoardPreferenceHelper.IsVisible(BoardPreferenceHelper.Board.componentBoard, false);
             if (componentBoardVisible)
                 ShowComponentBoard();
@@ -412,42 +344,6 @@ namespace UnityEditor.VFX.UI
 
             RegisterCallback<GeometryChangedEvent>(OnFirstResize);
         }
-
-        void OnRefreshUI(DropdownMenuAction action)
-        {
-            Resync();
-        }
-
-        void OnRuntimeModeChanged(DropdownMenuAction action)
-        {
-            m_IsRuntimeMode = !m_IsRuntimeMode;
-            controller.graph.SetCompilationMode(m_IsRuntimeMode ? VFXCompilationMode.Runtime : VFXCompilationMode.Edition);
-        }
-
-        DropdownMenuAction.Status RuntimeModeStatus(DropdownMenuAction action)
-        {
-            if (m_IsRuntimeMode)
-                return DropdownMenuAction.Status.Checked;
-            else
-                return DropdownMenuAction.Status.Normal;
-        }
-
-        void OnShaderValidationChanged(DropdownMenuAction action)
-        {
-            m_ForceShaderValidation = !m_ForceShaderValidation;
-            controller.graph.SetForceShaderValidation(m_ForceShaderValidation);
-        }
-
-        DropdownMenuAction.Status ShaderValidationStatus(DropdownMenuAction action)
-        {
-            if (VFXGraphCompiledData.k_FnVFXResource_SetCompileInitialVariants == null)
-                return DropdownMenuAction.Status.Disabled;
-            else if (m_ForceShaderValidation)
-                return DropdownMenuAction.Status.Checked;
-            else
-                return DropdownMenuAction.Status.Normal;
-        }
-
 
         public void SetBoardToFront(GraphElement board)
         {
@@ -965,8 +861,6 @@ namespace UnityEditor.VFX.UI
 
         void SyncEdges(int change)
         {
-            if (change == VFXViewController.Change.ui)
-                return; // for the moment ui changes don't have an impact on edges
             if (change != VFXViewController.Change.flowEdge)
             {
                 if (controller == null)
@@ -1108,8 +1002,13 @@ namespace UnityEditor.VFX.UI
                 VFXViewController templateController = VFXViewController.GetController(resource, true);
                 templateController.useCount++;
 
-                var data = VFXCopy.SerializeElements(templateController.allChildren, templateController.graph.UIInfos.uiBounds);
+#if OLD_COPY_PASTE
+                var data = VFXCopyPaste.SerializeElements(templateController.allChildren, templateController.graph.UIInfos.uiBounds);
+                VFXCopyPaste.UnserializeAndPasteElements(controller, tPos, data, this, groupNode != null ? groupNode.controller : null);
+#else
+                var data = VFXCopy.SerializeElements(templateController,templateController.allChildren, templateController.graph.UIInfos.uiBounds);
                 VFXPaste.UnserializeAndPasteElements(controller, tPos, data, this, groupNode != null ? groupNode.controller : null);
+#endif
 
                 templateController.useCount--;
             }
@@ -1124,9 +1023,22 @@ namespace UnityEditor.VFX.UI
         {
             var graph = controller.graph;
             graph.SetExpressionGraphDirty();
-            graph.RecompileIfNeeded(false, false);
+            graph.RecompileIfNeeded();
         }
 
+        private bool m_IsRuntimeMode = false;
+        void OnToggleRuntimeMode(ChangeEvent<bool> e)
+        {
+            m_IsRuntimeMode = e.newValue;
+            controller.graph.SetCompilationMode(m_IsRuntimeMode ? VFXCompilationMode.Runtime : VFXCompilationMode.Edition);
+        }
+
+        private bool m_ForceShaderValidation = false;
+        void OnToggleForceShaderValidation(ChangeEvent<bool> e)
+        {
+            m_ForceShaderValidation = e.newValue;
+            controller.graph.SetForceShaderValidation(m_ForceShaderValidation);
+        }
 
         public EventPropagation Compile()
         {
@@ -1188,30 +1100,16 @@ namespace UnityEditor.VFX.UI
             return EventPropagation.Stop;
         }
 
-        IEnumerable<VisualEffect> GetActiveComponents()
+        public EventPropagation ReinitComponents()
         {
             if (attachedComponent != null)
-                yield return attachedComponent;
+            {
+                attachedComponent.Reinit();
+            }
             else
             {
-                foreach (var component in UnityEngine.VFX.VFXManager.GetComponents())
-                    yield return component;
-            }
-        }
-
-        public EventPropagation ReinitComponents()
-            {
-            foreach (var component in GetActiveComponents())
-                component.Reinit();
-            return EventPropagation.Stop;
-            }
-
-        public EventPropagation ReinitAndPlayComponents()
-        {
-            foreach (var component in GetActiveComponents())
-            {
+                foreach (var component in UnityEngine.Experimental.VFX.VFXManager.GetComponents())
                     component.Reinit();
-                component.Play();
             }
             return EventPropagation.Stop;
         }
@@ -1437,15 +1335,9 @@ namespace UnityEditor.VFX.UI
         {
             if (Selection.activeObject != controller.model)
             {
-                Selection.activeObject = controller.model.visualEffectObject;
-                EditorGUIUtility.PingObject(controller.model.visualEffectObject);
+                Selection.activeObject = controller.model.asset;
+                EditorGUIUtility.PingObject(controller.model.asset);
             }
-        }
-
-        void Checkout()
-        {
-            Task task = Provider.Checkout(controller.model.visualEffectObject, CheckoutMode.Both);
-            task.Wait();
         }
 
         void ElementAddedToGroupNode(Group groupNode, IEnumerable<GraphElement> elements)
@@ -1500,7 +1392,7 @@ namespace UnityEditor.VFX.UI
 
         protected internal override bool canCopySelection
         {
-            get { return selection.OfType<VFXNodeUI>().Any() || selection.OfType<Group>().Any() || selection.OfType<VFXContextUI>().Any(t => !(t.controller.model is VFXBlockSubgraphContext)) || selection.OfType<VFXStickyNote>().Any(); }
+            get { return selection.OfType<VFXNodeUI>().Any() || selection.OfType<Group>().Any() || selection.OfType<VFXContextUI>().Any() || selection.OfType<VFXStickyNote>().Any(); }
         }
 
         IEnumerable<Controller> ElementsToController(IEnumerable<GraphElement> elements)
@@ -1571,14 +1463,17 @@ namespace UnityEditor.VFX.UI
             return bounds;
         }
 
-        public string SerializeElements(IEnumerable<GraphElement> elements)
+        string SerializeElements(IEnumerable<GraphElement> elements)
         {
             pasteOffset = defaultPasteOffset;
-
+#if OLD_COPY_PASTE
+            return VFXCopyPaste.SerializeElements(ElementsToController(elements), GetElementsBounds(elements));
+#else
             Profiler.BeginSample("VFXCopy.SerializeElements");
-            string result = VFXCopy.SerializeElements(ElementsToController(elements), GetElementsBounds(elements));
+            string result = VFXCopy.SerializeElements(controller, ElementsToController(elements), GetElementsBounds(elements));
             Profiler.EndSample();
             return result;
+#endif
         }
 
         Vector2 pasteCenter
@@ -1593,11 +1488,15 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        public void UnserializeAndPasteElements(string operationName, string data)
+        void UnserializeAndPasteElements(string operationName, string data)
         {
+#if OLD_COPY_PASTE
+            VFXCopyPaste.UnserializeAndPasteElements(controller, pasteCenter, data, this);
+#else
             Profiler.BeginSample("VFXPaste.VFXPaste.UnserializeAndPasteElements");
             VFXPaste.UnserializeAndPasteElements(controller, pasteCenter, data, this);
             Profiler.EndSample();
+#endif
 
             pasteOffset += defaultPasteOffset;
         }
@@ -1700,23 +1599,6 @@ namespace UnityEditor.VFX.UI
             VFXFilterWindow.Show(VFXViewWindow.currentWindow, e.eventInfo.mousePosition, ViewToScreenPosition(e.eventInfo.mousePosition), m_NodeProvider);
         }
 
-        void OnEnterSubgraph(DropdownMenuAction e)
-        {
-            var node = e.userData as VFXModel;
-            if( node is VFXSubgraphOperator subGraph)
-            {
-                VFXViewWindow.currentWindow.PushResource(subGraph.subgraph.GetResource());
-            }
-            else if (node is VFXSubgraphBlock subGraph2)
-            {
-                VFXViewWindow.currentWindow.PushResource(subGraph2.subgraph.GetResource());
-            }
-            else if (node is VFXSubgraphContext subGraph3)
-            {
-                VFXViewWindow.currentWindow.PushResource(subGraph3.subgraph.GetResource());
-            }
-        }
-
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
         {
             if (evt.target is VFXGroupNode || evt.target is VFXSystemBorder) // Default behaviour only shows the OnCreateNode if the target is the view itself.
@@ -1726,15 +1608,10 @@ namespace UnityEditor.VFX.UI
 
             Vector2 mousePosition = evt.mousePosition;
 
-            if (evt.target is VFXNodeUI node)
+            if (evt.target is VFXNodeUI)
             {
                 evt.menu.InsertAction(evt.target is VFXContextUI ? 1 : 0, "Group Selection", (e) => { GroupSelection(); },
                     (e) => { return canGroupSelection ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled; });
-
-                if( node.controller.model is VFXSubgraphOperator || node.controller.model is VFXSubgraphContext || node.controller.model is VFXSubgraphBlock)
-                {
-                    evt.menu.AppendAction("Enter Subgraph",OnEnterSubgraph,e=>DropdownMenuAction.Status.Normal, node.controller.model);
-                }
             }
 
             if (evt.target is VFXView)
@@ -1754,11 +1631,6 @@ namespace UnityEditor.VFX.UI
                         }
                     }
                 }
-
-                if( VFXViewWindow.currentWindow.resourceHistory.Count() > 0)
-                {
-                    evt.menu.AppendAction(" Back To Parent Graph", e => VFXViewWindow.currentWindow.PopResource());
-                }
             }
 
             if (evt.target is VFXContextUI)
@@ -1767,55 +1639,8 @@ namespace UnityEditor.VFX.UI
                 evt.menu.InsertSeparator("", 2);
                 evt.menu.InsertAction(3, string.IsNullOrEmpty(context.controller.model.label) ? "Name Context" : "Rename Context", a => context.OnRename(), e => DropdownMenuAction.Status.Normal);
             }
-
-
-            if (selection.OfType<VFXNodeUI>().Any() && evt.target is VFXNodeUI)
-            {
-                if (selection.OfType<VFXOperatorUI>().Any() && !selection.OfType<VFXNodeUI>().Any(t => !(t is VFXOperatorUI) && !(t is VFXParameterUI)))
-                    evt.menu.InsertAction(3, "Convert To Subgraph Operator", ToSubgraphOperator, e => DropdownMenuAction.Status.Normal);
-                else if (SelectionHasCompleteSystems())
-                    evt.menu.InsertAction(3, "Convert To Subgraph", ToSubgraphContext, e => DropdownMenuAction.Status.Normal);
-                else if (selection.OfType<VFXBlockUI>().Any() && selection.OfType<VFXBlockUI>().Select(t => t.context).Distinct().Count() == 1)
-                {
-                    evt.menu.InsertAction(3, "Convert to Subgraph Block", ToSubgraphBlock, e => DropdownMenuAction.Status.Normal);
-                }
-            }
-
         }
 
-
-        public bool SelectionHasCompleteSystems()
-        {
-            HashSet<VFXContextUI> selectedContexts = new HashSet<VFXContextUI>(selection.OfType<VFXContextUI>());
-            if (selectedContexts.Count() < 1)
-                return false;
-
-            HashSet<VFXData> usedDatas = new HashSet<VFXData>(selectedContexts.Select(t => t.controller.model.GetData()).Where(t=>t != null));
-
-            foreach( var context in GetAllContexts())
-            {
-                if (usedDatas.Contains(context.controller.model.GetData()) && !selectedContexts.Contains(context))
-                    return false;
-            }
-
-            return true;
-        }
-
-
-        void ToSubgraphBlock(DropdownMenuAction a)
-        {
-            VFXConvertSubgraph.ConvertToSubgraphBlock(this, selection.OfType<IControlledElement>().Select(t => t.controller), GetElementsBounds(selection.Where(t => !(t is Edge)).Cast<GraphElement>()));
-        }
-
-
-        void ToSubgraphOperator(DropdownMenuAction a)
-        {
-            VFXConvertSubgraph.ConvertToSubgraphOperator(this, selection.OfType<IControlledElement>().Select(t => t.controller), GetElementsBounds(selection.Where(t => !(t is Edge)).Cast<GraphElement>()));
-        }
-        void ToSubgraphContext(DropdownMenuAction a)
-        {
-            VFXConvertSubgraph.ConvertToSubgraphContext(this, selection.OfType<IControlledElement>().Select(t => t.controller), GetElementsBounds(selection.Where(t => !(t is Edge)).Cast<GraphElement>()));
-        }
 
         List<VFXSystemBorder> m_Systems = new List<VFXSystemBorder>();
 
@@ -1842,132 +1667,70 @@ namespace UnityEditor.VFX.UI
             }
         }
         
-        void OnDragUpdated(DragUpdatedEvent e)
-        {
-            if (DragAndDrop.GetGenericData("DragSelection") != null && selection.Any(t => t is VFXBlackboardField && (t as VFXBlackboardField).GetFirstAncestorOfType<VFXBlackboardRow>() != null))
-        {
-                VFXBlackboardField selectedField = selection.OfType<VFXBlackboardField>().Where(t => t.GetFirstAncestorOfType<VFXBlackboardRow>() != null).First();
 
-                if( selectedField.controller.isOutput &&selectedField.controller.nodeCount > 0 )
+        bool IDropTarget.CanAcceptDrop(List<ISelectable> selection)
         {
-                    return;
+            return selection.Any(t => t is BlackboardField && (t as BlackboardField).GetFirstAncestorOfType<VFXBlackboardRow>() != null);
         }
 
-                DragAndDrop.visualMode = DragAndDropVisualMode.Link;
-                e.StopPropagation();
-        }
-            else
+        bool IDropTarget.DragExited()
         {
-                var references = DragAndDrop.objectReferences.OfType<VisualEffectAsset>().Cast<VisualEffectObject>().Concat(DragAndDrop.objectReferences.OfType<VisualEffectSubgraphOperator>());
-                VisualEffectObject draggedObject = references.FirstOrDefault();
-                bool isOperator = draggedObject is VisualEffectSubgraphOperator;
+            return true;
+        }
 
-                if (draggedObject != null && draggedObject != controller.model.visualEffectObject)
+        bool IDropTarget.DragEnter(DragEnterEvent evt, IEnumerable<ISelectable> selection, IDropTarget enteredTarget, ISelection dragSource)
+        {
+            return true;
+        }
+
+        bool IDropTarget.DragLeave(DragLeaveEvent evt, IEnumerable<ISelectable> selection, IDropTarget leftTarget, ISelection dragSource)
+        {
+            return true;
+        }
+
+        bool IDropTarget.DragPerform(DragPerformEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget, ISelection dragSource)
+        {
+            var rows = selection.OfType<BlackboardField>().Select(t => t.GetFirstAncestorOfType<VFXBlackboardRow>()).Where(t => t != null).ToArray();
+
+            Vector2 mousePosition = contentViewContainer.WorldToLocal(evt.mousePosition);
+
+
+            foreach (var row in rows)
             {
-                    var draggedObjectDependencies = draggedObject.GetResource().GetOrCreateGraph().subgraphDependencies;
-                    bool vfxIntovfx = !isOperator && !controller.model.isSubgraph && !draggedObjectDependencies.Contains(controller.model.subgraph); // dropping a vfx into a vfx
-                    bool operatorIntovfx = isOperator && !controller.model.isSubgraph; //dropping an operator into a vfx
-                    bool operatorIntoOperator = isOperator && controller.model.visualEffectObject is VisualEffectSubgraphOperator && !draggedObjectDependencies.Contains(controller.model.visualEffectObject); //dropping an operator into a vfx
-                    if (vfxIntovfx || operatorIntovfx || operatorIntoOperator)
+                AddVFXParameter(mousePosition - new Vector2(100, 75), row.controller, null);
+            }
+
+            return true;
+        }
+
+        bool IDropTarget.DragUpdated(DragUpdatedEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget, ISelection dragSource)
         {
             DragAndDrop.visualMode = DragAndDropVisualMode.Link;
-                        e.StopPropagation();
-                    }
-                    return;
+
+            return true;
         }
 
-                var droppedBlocks = DragAndDrop.objectReferences.OfType<VisualEffectSubgraphBlock>();
-                if (droppedBlocks.Count() > 0 && !controller.model.isSubgraph )
+        void OnDragUpdated(DragUpdatedEvent e)
+        {
+            if (selection.Any(t => t is BlackboardField && (t as BlackboardField).GetFirstAncestorOfType<VFXBlackboardRow>() != null))
             {
                 DragAndDrop.visualMode = DragAndDropVisualMode.Link;
                 e.StopPropagation();
             }
         }
-        }
-
 
         void OnDragPerform(DragPerformEvent e)
         {
             var groupNode = GetPickedGroupNode(e.mousePosition);
 
-            if (DragAndDrop.GetGenericData("DragSelection") != null && selection.Any(t => t is BlackboardField && (t as BlackboardField).GetFirstAncestorOfType<VFXBlackboardRow>() != null))
-            {
             var rows = selection.OfType<BlackboardField>().Select(t => t.GetFirstAncestorOfType<VFXBlackboardRow>()).Where(t => t != null).ToArray();
             if (rows.Length > 0)
             {
-                    DragAndDrop.AcceptDrag();
                 Vector2 mousePosition = contentViewContainer.WorldToLocal(e.mousePosition);
                 foreach (var row in rows)
                 {
                     AddVFXParameter(mousePosition - new Vector2(50, 20), row.controller, groupNode);
                 }
-                    e.StopPropagation();
-                }
-            }
-            else
-            {
-                DragAndDrop.AcceptDrag();
-                var references = DragAndDrop.objectReferences.OfType<VisualEffectAsset>().Cast<VisualEffectObject>().Concat(DragAndDrop.objectReferences.OfType<VisualEffectSubgraphOperator>());
-
-                VisualEffectObject draggedObject = references.FirstOrDefault();
-                bool isOperator = draggedObject is VisualEffectSubgraphOperator;
-
-                if (draggedObject != null && draggedObject != controller.model.visualEffectObject)
-                {
-                    var draggedObjectDependencies = draggedObject.GetResource().GetOrCreateGraph().subgraphDependencies;
-                    bool vfxIntovfx = !isOperator && !controller.model.isSubgraph && !draggedObjectDependencies.Contains(controller.model.subgraph); // dropping a vfx into a vfx
-                    bool operatorIntovfx = isOperator && !controller.model.isSubgraph; //dropping an operator into a vfx
-                    bool operatorIntoOperator = isOperator && controller.model.visualEffectObject is VisualEffectSubgraphOperator && !draggedObjectDependencies.Contains(controller.model.visualEffectObject); //dropping an operator into a vfx
-                    if (vfxIntovfx || operatorIntovfx || operatorIntoOperator)
-                    {
-                        Vector2 mousePosition = contentViewContainer.WorldToLocal(e.mousePosition);
-                        VFXModel newModel = (references.First() is VisualEffectAsset) ? VFXSubgraphContext.CreateInstance<VFXSubgraphContext>() as VFXModel : VFXSubgraphOperator.CreateInstance<VFXSubgraphOperator>() as VFXModel;
-
-                        controller.AddVFXModel(mousePosition, newModel);
-
-                        newModel.SetSettingValue("m_Subgraph", references.First());
-
-                        //TODO add to picked groupnode
-                        e.StopPropagation();
-                    }
-                }
-                else if (!controller.model.isSubgraph) //can't drag a vfx subgraph block in a subgraph operator or a subgraph block
-                {
-                    var droppedBlocks = DragAndDrop.objectReferences.OfType<VisualEffectSubgraphBlock>();
-                    VisualEffectSubgraphBlock droppedBlock = droppedBlocks.FirstOrDefault();
-                    if (droppedBlock != null)
-                    {
-                        Vector2 mousePosition = contentViewContainer.WorldToLocal(e.mousePosition);
-
-                        VFXContextType contextKind = droppedBlocks.First().GetResource().GetOrCreateGraph().children.OfType<VFXBlockSubgraphContext>().First().compatibleContextType;
-                        VFXModelDescriptor<VFXContext> contextType = VFXLibrary.GetContexts().First(t => t.modelType == typeof(VFXBasicInitialize));
-                        if ((contextKind & VFXContextType.Update) == VFXContextType.Update)
-                            contextType = VFXLibrary.GetContexts().First(t => t.modelType == typeof(VFXBasicUpdate));
-                        else if ((contextKind & VFXContextType.Spawner) == VFXContextType.Spawner)
-                            contextType = VFXLibrary.GetContexts().First(t => t.modelType == typeof(VFXBasicSpawner));
-                        else if ((contextKind & VFXContextType.Output) == VFXContextType.Output)
-                            contextType = VFXLibrary.GetContexts().First(t => t.modelType == typeof(VFXPlanarPrimitiveOutput) && t.model.taskType == VFXTaskType.ParticleQuadOutput);
-
-                        VFXContext ctx = controller.AddVFXContext(mousePosition, contextType);
-
-                        VFXModel newModel = VFXSubgraphBlock.CreateInstance<VFXSubgraphBlock>();
-
-                        newModel.SetSettingValue("m_Subgraph", droppedBlocks.First());
-
-                        ctx.AddChild(newModel);
-
-                        //TODO add to picked groupnode
-                        e.StopPropagation();
-                    }
-                }
-            }
-        }
-
-        public void AssetMoved()
-        {
-            foreach (var item in this.Query<VFXNodeUI>().ToList())
-            {
-                item.AssetMoved();
             }
         }
     }

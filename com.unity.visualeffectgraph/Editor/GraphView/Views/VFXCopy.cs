@@ -12,6 +12,7 @@ namespace UnityEditor.VFX.UI
 {
     class VFXCopy : VFXCopyPasteCommon
     {
+        VFXViewController viewController;
         VFXContextController[] contexts;
         int[] contextsIndices;
         VFXOperatorController[] operators;
@@ -23,18 +24,18 @@ namespace UnityEditor.VFX.UI
 
         static VFXCopy s_Instance;
 
-        public static object Copy(IEnumerable<Controller> elements, Rect bounds)
+        public static object Copy(VFXViewController viewController,IEnumerable<Controller> elements, Rect bounds)
         {
             if (s_Instance == null)
                 s_Instance = new VFXCopy();
-            return s_Instance.CreateCopy(elements, bounds);
+            return s_Instance.CreateCopy(viewController,elements, bounds);
         }
 
-        public static string SerializeElements(IEnumerable<Controller> elements, Rect bounds)
+        public static string SerializeElements(VFXViewController viewController,IEnumerable<Controller> elements, Rect bounds)
         {
             if (s_Instance == null)
                 s_Instance = new VFXCopy();
-            var serializableGraph = s_Instance.CreateCopy(elements, bounds) as SerializableGraph;
+            var serializableGraph = s_Instance.CreateCopy(viewController,elements, bounds) as SerializableGraph;
 
             return JsonUtility.ToJson(serializableGraph);
         }
@@ -47,8 +48,9 @@ namespace UnityEditor.VFX.UI
             return s_Instance.DoCopyBlocks(blocks);
         }
 
-        object CreateCopy(IEnumerable<Controller> elements, Rect bounds)
+        object CreateCopy(VFXViewController viewController,IEnumerable<Controller> elements, Rect bounds)
         {
+            this.viewController = viewController;
             IEnumerable<VFXContextController> contexts = elements.OfType<VFXContextController>();
             IEnumerable<VFXNodeController> nodes = elements.Where(t => t is VFXOperatorController || t is VFXParameterNodeController).Cast<VFXNodeController>();
             IEnumerable<VFXBlockController> blocks = elements.OfType<VFXBlockController>();
@@ -102,6 +104,8 @@ namespace UnityEditor.VFX.UI
             datas = contexts.Select(t => t.model.GetData()).Where(t => t != null).ToArray();
 
             CopyOperatorsAndContexts(ref serializableGraph);
+
+            serializableGraph.customAttributes = customAttributes.ToArray();
 
             CopyParameters(ref serializableGraph);
 
@@ -264,6 +268,27 @@ namespace UnityEditor.VFX.UI
                 ).ToArray();
         }
 
+        List<CustomAttribute> customAttributes = new List<CustomAttribute>();
+
+
+        void  SearchCustomAttributesInMode(VFXModel model)
+        {
+            viewController.graph.ForEachSettingUsingAttributeInModel(model, f =>
+            {
+                string attribute = (string)f.GetValue(model);
+
+                if (viewController.graph.HasCustomAttribute(attribute) && !customAttributes.Any(t => t.name == attribute))
+                {
+                    CustomAttribute newAttribute;
+                    newAttribute.name = attribute;
+                    newAttribute.type = viewController.graph.GetCustomAttributeType(attribute);
+                    customAttributes.Add(newAttribute);
+                }
+                return false;
+            }
+            );
+        }
+
         void CopyOperatorsAndContexts(ref SerializableGraph serializableGraph)
         {
             serializableGraph.contexts = new Context[contexts.Length];
@@ -322,6 +347,8 @@ namespace UnityEditor.VFX.UI
 
             node.expandedInputs = AllSlots(inputSlots).Where(t => !t.collapsed).Select(t => t.path).ToArray();
             node.expandedOutputs = AllSlots((model as IVFXSlotContainer).outputSlots).Where(t => !t.collapsed).Select(t => t.path).ToArray();
+
+            SearchCustomAttributesInMode(model);
 
             return id;
         }

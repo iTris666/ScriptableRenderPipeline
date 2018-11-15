@@ -149,6 +149,13 @@ namespace UnityEditor.VFX.UI
         }
 
         [Serializable]
+        public struct CustomAttribute
+        {
+            public string name;
+            public VFXValueType type;
+        }
+
+        [Serializable]
         protected class SerializableGraph
         {
             public Rect bounds;
@@ -168,6 +175,7 @@ namespace UnityEditor.VFX.UI
             public GroupNode[] groupNodes;
 
             public int controllerCount;
+            public CustomAttribute[] customAttributes;
         }
 
         static Dictionary<Type, List<FieldInfo>> s_SerializableFieldByType = new Dictionary<Type, List<FieldInfo>>();
