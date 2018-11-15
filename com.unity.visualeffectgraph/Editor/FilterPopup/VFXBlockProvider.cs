@@ -25,6 +25,45 @@ namespace UnityEditor.VFX.UI
             }
         }
 
+
+        public static IEnumerable<VFXModelDescriptor<U>> GetModelsWithGraphVariants<U>(VFXGraph graph, ref List<MethodInfo> typesWithGraphVariants) where U : VFXModel
+        {
+            if (typesWithGraphVariants == null)
+            {
+                typesWithGraphVariants = new List<MethodInfo>();
+                Type[] paramTypes = new Type[] { typeof(VFXGraph) };
+                foreach (Type operatorType in VFXLibrary.FindConcreteSubclasses(typeof(U)))
+                {
+                    var method = operatorType.GetMethod("GetGraphVariants", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null, paramTypes, null);
+                    if (method != null && method.ReturnType == typeof(Dictionary<string, object[]>))
+                    {
+                        typesWithGraphVariants.Add(method);
+                    }
+                }
+            }
+            return RealGetModelsWithGraphVariants<U>(graph, typesWithGraphVariants);
+        }
+
+        static IEnumerable<VFXModelDescriptor<U>> RealGetModelsWithGraphVariants<U>(VFXGraph graph, List<MethodInfo> typesWithGraphVariants) where U : VFXModel
+        {
+            object[] parameters = new object[] { graph };
+            foreach (var method in typesWithGraphVariants)
+            {
+                Dictionary<string, object[]> variants = (Dictionary<string, object[]>)method.Invoke(null, parameters);
+
+                var arrVariants = variants.Select(o => o.Value as IEnumerable<object>);
+
+                //Cartesian product
+                IEnumerable<IEnumerable<object>> empty = new[] { Enumerable.Empty<object>() };
+                var combinations = arrVariants.Aggregate(empty, (x, y) => x.SelectMany(accSeq => y.Select(item => accSeq.Concat(new[] { item }))));
+                foreach (var combination in combinations)
+                {
+                    var variant = combination.Select((o, i) => new KeyValuePair<string, object>(variants.ElementAt(i).Key, o)).ToArray();
+                    yield return new VFXModelDescriptor<U>((U)ScriptableObject.CreateInstance(method.DeclaringType), variant);
+                }
+            }
+        }
+
         protected VFXAbstractProvider(Action<T, Vector2> onSpawnDesc)
         {
             m_onSpawnDesc = onSpawnDesc;
@@ -147,6 +186,7 @@ namespace UnityEditor.VFX.UI
         {
             get {return "Block"; }
         }
+        List<MethodInfo> blockTypesWithGraphVariants = null;
 
         protected override IEnumerable<VFXBlockProvider.Descriptor> GetDescriptors()
         {
@@ -158,8 +198,8 @@ namespace UnityEditor.VFX.UI
                                 (((SubGraphCache.AdditionalBlockInfo)t.additionalInfos).compatibleType & m_ContextController.model.contextType) != 0  &&
                                 (((SubGraphCache.AdditionalBlockInfo)t.additionalInfos).compatibleData & m_ContextController.model.ownedType) != 0
                                 ).Select(t=> (Descriptor)new SubgraphBlockDescriptor(t)));
-
-            var blockList = filteredBlocks.ToList();
+var extras = GetModelsWithGraphVariants<VFXBlock>(m_ContextController.viewController.graph, ref blockTypesWithGraphVariants);
+            var blockList = filteredBlocks.Concat(extras).ToList();
 
             blockList.Sort((blockA, blockB) =>
             {
