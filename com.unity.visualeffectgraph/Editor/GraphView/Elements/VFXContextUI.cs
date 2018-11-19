@@ -394,21 +394,21 @@ namespace UnityEditor.VFX.UI
             int blockIndex = GetDragBlockIndex(mousePosition);
 
             if (DragAndDrop.GetGenericData("DragSelection") != null)
-            {
+        {
                 IEnumerable<VFXBlockUI> blocksUI = (DragAndDrop.GetGenericData("DragSelection") as List<ISelectable>).Select(t => t as VFXBlockUI).Where(t => t != null);
 
                 DragAndDrop.visualMode = evt.ctrlKey ? DragAndDropVisualMode.Copy : DragAndDropVisualMode.Move;
-                DraggingBlocks(blocksUI, blockIndex);
-                if (!m_DragStarted)
-                {
-                    // TODO: Do something on first DragUpdated event (initiate drag)
-                    m_DragStarted = true;
-                    AddToClassList("dropping");
-                }
-                else
-                {
-                    // TODO: Do something on subsequent DragUpdated events
-                }
+            DraggingBlocks(blocksUI, blockIndex);
+            if (!m_DragStarted)
+            {
+                // TODO: Do something on first DragUpdated event (initiate drag)
+                m_DragStarted = true;
+                AddToClassList("dropping");
+            }
+            else
+            {
+                // TODO: Do something on subsequent DragUpdated events
+            }
             }
             else
             {
@@ -438,20 +438,20 @@ namespace UnityEditor.VFX.UI
             RemoveDragIndicator();
             if (DragAndDrop.GetGenericData("DragSelection") != null)
             {
-                Vector2 mousePosition = m_BlockContainer.WorldToLocal(evt.mousePosition);
+            Vector2 mousePosition = m_BlockContainer.WorldToLocal(evt.mousePosition);
 
                 IEnumerable<VFXBlockUI> blocksUI = (DragAndDrop.GetGenericData("DragSelection") as List<ISelectable>).Select(t => t as VFXBlockUI).Where(t => t != null);
-                if (!CanDrop(blocksUI))
+            if (!CanDrop(blocksUI))
                     return;
 
-                int blockIndex = GetDragBlockIndex(mousePosition);
+            int blockIndex = GetDragBlockIndex(mousePosition);
 
-                BlocksDropped(blockIndex, blocksUI, evt.ctrlKey);
+            BlocksDropped(blockIndex, blocksUI, evt.ctrlKey);
 
-                DragAndDrop.AcceptDrag();
+            DragAndDrop.AcceptDrag();
 
-                m_DragStarted = false;
-                RemoveFromClassList("dropping");
+            m_DragStarted = false;
+            RemoveFromClassList("dropping");
             }
             else
             {
@@ -653,7 +653,7 @@ namespace UnityEditor.VFX.UI
 
             using (var growContext = new GrowContext(this))
             {
-                controller.AddBlock(blockIndex, descriptor.CreateInstance(), true /* freshly created block, should init space */);
+                controller.AddBlock(blockIndex, descriptor.CreateInstance());
             }
         }
 
@@ -785,7 +785,7 @@ namespace UnityEditor.VFX.UI
             {
                 foreach (var output in controller.flowInputAnchors[0].connections.Select(t => t.output).ToArray())
                     newContextController.model.LinkFrom(output.context.model, output.slotIndex);
-            }
+                }
 
             // Apply the slot changes that can be the result of settings changes
             newContextController.ApplyChanges();
@@ -802,11 +802,11 @@ namespace UnityEditor.VFX.UI
                         firstTextureSlot = slot;
                     continue;
                 }
-                    
+
                 object value;
                 if (VFXConverter.TryConvertTo(mySlot.value, slot.property.type, out value))
                     slot.value = value;
-            }
+                }
             //Hack to copy the first texture in the first texture slot if not found by name
             if( firstTextureSlot != null)
             {

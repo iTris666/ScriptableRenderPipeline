@@ -92,7 +92,7 @@ namespace UnityEditor.VFX
             return parent.AcceptChild(m_Template, index);
         }
 
-        protected void ApplyVariant(VFXModel model)
+        public void ApplyVariant(VFXModel model)
         {
             model.SetSettingValues(m_Variants);
         }

@@ -55,6 +55,8 @@ namespace UnityEditor.VFX.UI
             changedCustomAttributesNames = null;
             this.viewController = null;
 
+            PasteCustomAttributes(serializableGraph.customAttributes);
+
             if (serializableGraph.blocksOnly)
             {
                 if (view != null)
@@ -124,7 +126,7 @@ namespace UnityEditor.VFX.UI
             foreach (var block in serializableGraph.operators)
             {
                 Node blk = block;
-                VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(viewController, ref blk);
+                VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(viewController, ref blk,targetModelContext, targetIndex);
 
                 if (targetModelContext.AcceptChild(newBlock, targetIndex))
                 {
@@ -165,7 +167,6 @@ namespace UnityEditor.VFX.UI
             pasteOffset = (serializableGraph.bounds.width > 0 && serializableGraph.bounds.height > 0) ? center - serializableGraph.bounds.center : Vector2.zero;
             MakePasteOffsetUnique(serializableGraph);
 
-            PasteCustomAttributes(serializableGraph.customAttributes);
 
             // Paste all nodes
             PasteContexts(ref serializableGraph);
@@ -306,9 +307,6 @@ namespace UnityEditor.VFX.UI
                 newBlock.enabled = (blk.flags & Node.Flags.Enabled) == Node.Flags.Enabled;
 
                 blocks.Add(newBlock);
-
-                if (newBlock != null)
-                    newContext.AddChild(newBlock);
             }
             newContexts.Add(new KeyValuePair<VFXContext, List<VFXBlock>>(newContext, blocks));
 
@@ -324,16 +322,59 @@ namespace UnityEditor.VFX.UI
             if (newNode == null)
                 return null;
 
-            var ope = node;
-            PasteNode(newNode, ref ope);
-
-            if (!(newNode is VFXBlock))
-            {
-                m_NodesInTheSameOrder[node.indexInClipboard] = new VFXNodeID(newNode,0);
-            }
-                
+            var n = node;
+            PasteNode(newNode, ref n);
 
             return newNode;
+        }
+
+        VFXBlock PasteAndInitializeBlock(ref Node node, VFXContext context, int index)
+        {
+            Type type = node.type;
+            if (type == null)
+                return null;
+            var newNode = ScriptableObject.CreateInstance(type) as VFXBlock;
+            if (newNode == null)
+                return null;
+            if(!context.AcceptChild(newNode, index))
+            {
+                VFXModel.DestroyImmediate(newNode);
+                return null;
+            }
+
+            var n = node;
+            newNode.position = node.position + pasteOffset;
+
+            PasteModelSettings(newNode, node.settings, newNode.GetType());
+
+            PatchAttributesInNode(newNode);
+
+            context.AddChild(newNode, index);
+
+            return newNode;
+        }
+
+        void PasteSlotStuff(VFXModel model,ref Node node)
+        {
+            var slotContainer = model as IVFXSlotContainer;
+            var inputSlots = slotContainer.inputSlots;
+            for (int i = 0; i < node.inputSlots.Length; ++i)
+            {
+                if (inputSlots[i].name == node.inputSlots[i].name)
+                {
+                    inputSlots[i].value = node.inputSlots[i].value.Get();
+                }
+            }
+
+
+            foreach (var slot in AllSlots(slotContainer.inputSlots))
+            {
+                slot.collapsed = !node.expandedInputs.Contains(slot.path);
+            }
+            foreach (var slot in AllSlots(slotContainer.outputSlots))
+            {
+                slot.collapsed = !node.expandedOutputs.Contains(slot.path);
+            }
         }
 
         void PasteModelSettings(VFXModel model, Property[] settings, Type type)
@@ -349,7 +390,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        void PasteNode(VFXModel model, ref Node node)
+        void PasteNode(VFXModel model, ref Node node, VFXContext context = null)
         {
             model.position = node.position + pasteOffset;
 
@@ -359,6 +400,8 @@ namespace UnityEditor.VFX.UI
 
             if (!(model is VFXBlock))
                 viewController.graph.AddChild(model);
+            else
+                context.AddChild(model);
 
             model.Invalidate(VFXModel.InvalidationCause.kSettingChanged);
 
@@ -380,16 +423,8 @@ namespace UnityEditor.VFX.UI
             if ((node.flags & Node.Flags.SuperCollapsed) == Node.Flags.SuperCollapsed)
                 model.superCollapsed = true;
 
-            foreach (var slot in AllSlots(slotContainer.inputSlots))
-            {
-                slot.collapsed = !node.expandedInputs.Contains(slot.path);
+            PasteSlotStuff(model, ref node);
             }
-            foreach (var slot in AllSlots(slotContainer.outputSlots))
-            {
-                slot.collapsed = !node.expandedOutputs.Contains(slot.path);
-            }
-        }
-
 
         void PatchAttributesInNode(VFXModel model)
         {
