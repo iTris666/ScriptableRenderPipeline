@@ -53,17 +53,13 @@ namespace UnityEditor.VFX.UI
         {
             SerializableGraph serializableGraph = (SerializableGraph)data;
             changedCustomAttributesNames = null;
-            this.viewController = null;
+            this.viewController = viewController;
 
             PasteCustomAttributes(serializableGraph.customAttributes);
 
             if (serializableGraph.blocksOnly)
-            {
                 if (view != null)
-                {
                     PasteBlocks(view, ref serializableGraph);
-                }
-            }
             else
             {
                 PasteAll(viewController, center, ref serializableGraph, view, groupNode, nodesInTheSameOrder);
@@ -156,9 +152,8 @@ namespace UnityEditor.VFX.UI
         VFXViewController viewController;
         VFXNodeID[] m_NodesInTheSameOrder = null;
 
-        void PasteAll(VFXViewController viewController, Vector2 center, ref SerializableGraph serializableGraph, VFXView view, VFXGroupNodeController groupNode, List<VFXNodeController> nodesInTheSameOrder)
+        void PasteAll(VFXViewController viewController, Vector2 center, ref SerializableGraph serializableGraph, VFXView view, VFXGroupNodeController groupNode)
         {
-            this.viewController = viewController;
             newControllers.Clear();
 
             m_NodesInTheSameOrder = new VFXNodeID[serializableGraph.controllerCount];
@@ -424,7 +419,7 @@ namespace UnityEditor.VFX.UI
                 model.superCollapsed = true;
 
             PasteSlotStuff(model, ref node);
-            }
+        }
 
         void PatchAttributesInNode(VFXModel model)
         {
