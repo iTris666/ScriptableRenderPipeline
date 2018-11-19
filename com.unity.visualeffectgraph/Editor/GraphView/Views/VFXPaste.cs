@@ -55,11 +55,12 @@ namespace UnityEditor.VFX.UI
             changedCustomAttributesNames = null;
             this.viewController = viewController;
 
-            PasteCustomAttributes(serializableGraph.customAttributes);
 
             if (serializableGraph.blocksOnly)
+            {
                 if (view != null)
                     PasteBlocks(view, ref serializableGraph);
+            }
             else
             {
                 PasteAll(viewController, center, ref serializableGraph, view, groupNode, nodesInTheSameOrder);
@@ -90,6 +91,8 @@ namespace UnityEditor.VFX.UI
                 Debug.LogError(m_BlockPasteError.text);
                 return;
             }
+
+            PasteCustomAttributes(serializableGraph.customAttributes);
 
             VFXContext targetModelContext = targetContext.controller.model;
 
@@ -124,7 +127,7 @@ namespace UnityEditor.VFX.UI
                 Node blk = block;
                 VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(viewController, ref blk,targetModelContext, targetIndex);
 
-                if (targetModelContext.AcceptChild(newBlock, targetIndex))
+                if (newBlock != null)
                 {
                     newBlocks.Add(newBlock);
                     m_NodesInTheSameOrder[cpt] = new VFXNodeID(newBlock, 0);
@@ -162,6 +165,7 @@ namespace UnityEditor.VFX.UI
             pasteOffset = (serializableGraph.bounds.width > 0 && serializableGraph.bounds.height > 0) ? center - serializableGraph.bounds.center : Vector2.zero;
             MakePasteOffsetUnique(serializableGraph);
 
+            PasteCustomAttributes(serializableGraph.customAttributes);
 
             // Paste all nodes
             PasteContexts(ref serializableGraph);
@@ -297,7 +301,7 @@ namespace UnityEditor.VFX.UI
             {
                 var blk = block;
 
-                VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(ref blk);
+                VFXBlock newBlock = PasteAndInitializeBlock(ref blk,newContext,-1);
 
                 newBlock.enabled = (blk.flags & Node.Flags.Enabled) == Node.Flags.Enabled;
 
