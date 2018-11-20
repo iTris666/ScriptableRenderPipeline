@@ -239,12 +239,12 @@ namespace UnityEditor.VFX
             public int systemIndex;
         }
 
-        private static VFXCPUBufferData ComputeArrayOfStructureInitialData(IEnumerable<VFXLayoutElementDesc> layout)
+        private VFXCPUBufferData ComputeArrayOfStructureInitialData(IEnumerable<VFXLayoutElementDesc> layout)
         {
             var data = new VFXCPUBufferData();
             foreach (var element in layout)
             {
-                var attribute = VFXAttribute.AllAttribute.FirstOrDefault(o => o.name == element.name);
+                var attribute = VFXAttribute.AllAttribute.Concat(m_Graph.customAttributes.Select(t=> VFXAttribute.Find(t,m_Graph))).FirstOrDefault(o => o.name == element.name);
                 bool useAttribute = attribute.name == element.name;
                 if (element.type == VFXValueType.Boolean)
                 {
@@ -294,7 +294,7 @@ namespace UnityEditor.VFX
             }
             return data;
         }
-        
+
         void RecursePutSubgraphParent(Dictionary<VFXSubgraphContext, VFXSubgraphContext> parents, List<VFXSubgraphContext> subgraphs,VFXSubgraphContext subgraph)
         {
             foreach (var subSubgraph in subgraph.subChildren.OfType<VFXSubgraphContext>().Where(t => t.subgraph != null))
@@ -421,7 +421,7 @@ namespace UnityEditor.VFX
             return result;
         }
 
-        private static void FillSpawner(Dictionary<VFXContext, SpawnInfo> outContextSpawnToSpawnInfo,
+        private void FillSpawner(Dictionary<VFXContext, SpawnInfo> outContextSpawnToSpawnInfo,
             List<VFXCPUBufferDesc> outCpuBufferDescs,
             List<VFXEditorSystemDesc> outSystemDescs,
             IEnumerable<VFXContext> contexts,
@@ -540,7 +540,7 @@ namespace UnityEditor.VFX
         }
 
         struct SubgraphInfos
-        {   
+        {
             public Dictionary<VFXSubgraphContext, VFXSubgraphContext> subgraphParents;
             public Dictionary<VFXContext, VFXSubgraphContext> spawnerSubgraph;
             public List<VFXSubgraphContext> subgraphs;
@@ -626,16 +626,16 @@ namespace UnityEditor.VFX
 
                         if(generatedContent!= null)
                         {
-                            outGeneratedCodeData.Add(new GeneratedCodeData()
-                            {
-                                context = context,
-                                computeShader = context.codeGeneratorCompute,
-                                compilMode = compilationMode,
-                                content = generatedContent
-                            });
-                        }
+                        outGeneratedCodeData.Add(new GeneratedCodeData()
+                        {
+                            context = context,
+                            computeShader = context.codeGeneratorCompute,
+                            compilMode = compilationMode,
+                            content = generatedContent
+                        });
                     }
                 }
+            }
             }
             finally
             {
