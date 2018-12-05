@@ -66,7 +66,9 @@ namespace UnityEditor.VFX
                         if (data == this)
                             return datas.Count();
                 }
-                throw new InvalidOperationException("Can't determine index of a VFXData without context");
+                //throw new InvalidOperationException("Can't determine index of a VFXData without context");
+
+                return 0;
             }
         }
 
