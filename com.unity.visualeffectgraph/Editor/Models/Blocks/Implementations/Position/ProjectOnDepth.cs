@@ -62,7 +62,7 @@ namespace UnityEditor.VFX.Block
 
         public override string name { get { return "Project On Depth"; } }
         public override VFXContextType compatibleContexts { get { return VFXContextType.Init; } }
-        public override VFXDataType compatibleData { get { return VFXDataType.kParticle; } }
+        public override VFXDataType compatibleData { get { return VFXDataType.Particle; } }
         public override IEnumerable<VFXAttributeInfo> attributes
         {
             get
