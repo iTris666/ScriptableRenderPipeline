@@ -1,17 +1,13 @@
-using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Experimental.VFX;
-using UnityEditor.VFX.UI;
-using UnityEngine.Experimental.UIElements;
-using UnityEditor.Experimental.UIElements;
+using UnityEngine.UIElements;
 
 namespace UnityEditor.VFX.CurveView
 {
     class VFXCurveBackgroundFactory : UxmlFactory<CurveBackground>
     { }
-    class CurveBackground : VisualElement
+    class CurveBackground : ImmediateModeElement
     {
         CurveView m_View;
 
@@ -95,7 +91,7 @@ namespace UnityEditor.VFX.CurveView
         }
 
         Material s_Mat;
-        protected override void DoRepaint(IStylePainter painter)
+        protected override void ImmediateRepaint()
         {
             float height = contentRect.height;
             float width = contentRect.width;

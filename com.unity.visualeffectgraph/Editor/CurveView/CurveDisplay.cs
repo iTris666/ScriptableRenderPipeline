@@ -2,14 +2,12 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Experimental.VFX;
 using UnityEditor.VFX.UI;
-using UnityEngine.Experimental.UIElements;
-using UnityEditor.Experimental.UIElements;
+using UnityEngine.UIElements;
 
 namespace UnityEditor.VFX.CurveView
 {
-    class CurveDisplay : VisualElement, IControlledElement<CurveController>
+    class CurveDisplay : ImmediateModeElement, IControlledElement<CurveController>
     {
         CurveView m_View;
         public CurveDisplay(CurveView view)
@@ -46,7 +44,7 @@ namespace UnityEditor.VFX.CurveView
 
         public Color curveColor { get; set; }
 
-        protected override void DoRepaint(IStylePainter painter)
+        protected override void ImmediateRepaint()
         {
             FillCurveData((int)(layout.width / 4), false);
 
@@ -348,9 +346,9 @@ namespace UnityEditor.VFX.CurveView
             for (int i = 0; i < controller.curve.keys.Length; ++i)
             {
                 float timeNormalized = (controller.curve.keys[i].time - timeStart) / length;
-                m_Keys[i].style.positionLeft = timeNormalized * scale.x - m_Keys[i].style.width * 0.5f + m_View.offset.x;
+                m_Keys[i].style.left = timeNormalized * scale.x - m_Keys[i].resolvedStyle.width * 0.5f + m_View.offset.x;
                 float valueNormalized =  (controller.curve.keys[i].value - minValue) / range - 0.5f;
-                m_Keys[i].style.positionTop = height*0.5f - valueNormalized * scale.y - m_Keys[i].style.height * 0.5f + m_View.offset.y;
+                m_Keys[i].style.top = height*0.5f - valueNormalized * scale.y - m_Keys[i].resolvedStyle.height * 0.5f + m_View.offset.y;
             }
         }
     }

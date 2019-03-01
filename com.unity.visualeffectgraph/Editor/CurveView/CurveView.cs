@@ -2,10 +2,8 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Experimental.VFX;
 using UnityEditor.VFX.UI;
-using UnityEngine.Experimental.UIElements;
-using UnityEditor.Experimental.UIElements;
+using UnityEngine.UIElements;
 
 namespace UnityEditor.VFX.CurveView
 {
@@ -24,7 +22,7 @@ namespace UnityEditor.VFX.CurveView
             m_CurveView = new CurveView();
             m_CurveView.StretchToParentSize();
 
-            this.GetRootVisualContainer().Add(m_CurveView);
+            rootVisualElement.Add(m_CurveView);
         }
     }
 
@@ -112,7 +110,7 @@ namespace UnityEditor.VFX.CurveView
         public CurveView()
         {
             var uxml = Resources.Load<VisualTreeAsset>("uxml/CurveView");
-            uxml.CloneTree(this, null);
+            uxml.CloneTree(this);
 
             m_CurveContainer = this.Query("curve-container");
             var newController = new CurveViewController();
