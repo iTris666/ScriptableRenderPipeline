@@ -11,7 +11,7 @@ namespace UnityEditor.VFX.Block
     {
         public override sealed IEnumerable<IEnumerable<KeyValuePair<string, object>>> ComputeVariants()
         {
-            var attributes = VFXAttribute.AllIncludingVariadicReadWritable;
+            var attributes = VFXAttribute.StaticIncludingVariadicReadWritable;
             var randoms = new[] { RandomMode.Off, RandomMode.PerComponent };
             var sources = new[] { SetAttribute.ValueSource.Slot, SetAttribute.ValueSource.Source };
             var compositions = new[] { AttributeCompositionMode.Overwrite, AttributeCompositionMode.Add, AttributeCompositionMode.Multiply, AttributeCompositionMode.Blend };
@@ -69,7 +69,7 @@ namespace UnityEditor.VFX.Block
         }
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), StringProvider(typeof(ReadWritableAttributeProvider))]
-        public string attribute;
+        public string attribute = VFXAttribute.AllIncludingVariadic.First();
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector)]
         public AttributeCompositionMode Composition = AttributeCompositionMode.Overwrite;
@@ -103,10 +103,10 @@ namespace UnityEditor.VFX.Block
         private bool attributeIsValid
         {
             get
-            {
+                {
                 return !string.IsNullOrEmpty(attribute);
+                }
             }
-        }
 
         private string ComputeName(bool libraryName)
         {
