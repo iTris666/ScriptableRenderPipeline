@@ -81,9 +81,6 @@ namespace UnityEditor.VFX.UI
             if (attributes == null)
                 return;
             attributes.SetAttributeType(m_Index, (VFXValueType)t);
-
-
-
         }
 
         public void Update()

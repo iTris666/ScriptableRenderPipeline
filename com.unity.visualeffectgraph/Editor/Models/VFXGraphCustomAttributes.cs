@@ -91,8 +91,6 @@ namespace UnityEditor.VFX
                 };
             m_CustomAttributes[index].defaultValue.Set(value);
 
-            //TODO: What should we notify here ?
-
             InvalidateAttributeValue(m_CustomAttributes[index].name);
 
             Invalidate(InvalidationCause.kParamChanged);

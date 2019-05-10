@@ -185,12 +185,6 @@ namespace UnityEditor.VFX
             return exist;
         }
 
-        public string GetNameInCode(VFXAttributeLocation location)
-        {
-            string structName = location == VFXAttributeLocation.Source ? "sourceAttributes" : "attributes";
-            return String.Format("{0}.{1}", structName, name);
-        }
-
         public string name;
         public VFXValue value;
         public VFXVariadic variadic;
