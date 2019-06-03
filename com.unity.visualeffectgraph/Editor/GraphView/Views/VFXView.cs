@@ -165,6 +165,11 @@ namespace UnityEditor.VFX.UI
         {
             foreach (var edge in dataEdges.Where(t => t.Value.input == anchor || t.Value.output == anchor).ToArray())
             {
+                if (edge.Value.input == anchor)
+                    edge.Value.output.Disconnect(edge.Value);
+                else
+                    edge.Value.input.Disconnect(edge.Value);
+
                 RemoveElement(edge.Value);
                 dataEdges.Remove(edge.Key);
             }
