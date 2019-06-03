@@ -30,6 +30,18 @@ namespace UnityEditor.VFX
 
             return cptSlot;
         }
+        public static VFXPropertyWithValue GetPropertyFromInputParameter(VFXParameter param)
+        {
+            List<VFXPropertyAttribute> attributes = new List<VFXPropertyAttribute>();
+            if (!string.IsNullOrEmpty(param.tooltip))
+                attributes.Add(new VFXPropertyAttribute(VFXPropertyAttribute.Type.kTooltip, param.tooltip));
+
+            if (param.hasRange)
+                attributes.Add(new VFXPropertyAttribute(VFXPropertyAttribute.Type.kRange, (float)VFXConverter.ConvertTo(param.m_Min.Get(), typeof(float)), (float)VFXConverter.ConvertTo(param.m_Max.Get(), typeof(float))));
+
+            return new VFXPropertyWithValue(new VFXProperty(param.type, param.exposedName, attributes.ToArray()), param.value);
+        }
+
         public static bool InputPredicate(VFXParameter param)
         {
             return param.exposed && !param.isOutput;
@@ -67,14 +79,7 @@ namespace UnityEditor.VFX
             get {
                 foreach (var param in GetParameters(t => VFXSubgraphUtility.InputPredicate(t)))
                 {
-                    List<VFXPropertyAttribute> attributes = new List<VFXPropertyAttribute>();
-                    if (!string.IsNullOrEmpty(param.tooltip))
-                        attributes.Add(new VFXPropertyAttribute(VFXPropertyAttribute.Type.kTooltip, param.tooltip));
-
-                    if (param.hasRange)
-                        attributes.Add(new VFXPropertyAttribute(VFXPropertyAttribute.Type.kRange, (float)VFXConverter.ConvertTo(param.m_Min.Get(), typeof(float)), (float)VFXConverter.ConvertTo(param.m_Max.Get(), typeof(float))));
-
-                    yield return new VFXPropertyWithValue(new VFXProperty(param.type, param.exposedName, attributes.ToArray()), param.value);
+                    yield return VFXSubgraphUtility.GetPropertyFromInputParameter(param);
                 }
             }
         }

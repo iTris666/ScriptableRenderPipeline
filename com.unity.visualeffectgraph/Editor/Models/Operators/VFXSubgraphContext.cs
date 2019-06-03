@@ -6,7 +6,8 @@ using UnityEngine.Experimental.VFX;
 using UnityEditor.Experimental.VFX;
 
 namespace UnityEditor.VFX
-{   
+{
+
     class VFXSubgraphContext : VFXContext
     {
         public const string triggerEventName = "Trigger";
@@ -42,9 +43,7 @@ namespace UnityEditor.VFX
                 }
 
                 foreach ( var param in GetParameters(t=> InputPredicate(t)))
-                {
-                    yield return new VFXPropertyWithValue(new VFXProperty(param.type, param.exposedName));
-                }
+                    yield return VFXSubgraphUtility.GetPropertyFromInputParameter(param);
             }
         }
 
