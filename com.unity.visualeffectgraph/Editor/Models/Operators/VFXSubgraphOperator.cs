@@ -67,10 +67,14 @@ namespace UnityEditor.VFX
             get {
                 foreach (var param in GetParameters(t => VFXSubgraphUtility.InputPredicate(t)))
                 {
-                    if( ! string.IsNullOrEmpty(param.tooltip))
-                        yield return new VFXPropertyWithValue(new VFXProperty(param.type, param.exposedName, new VFXPropertyAttribute(VFXPropertyAttribute.Type.kTooltip,param.tooltip)),param.value);
-                    else
-                        yield return new VFXPropertyWithValue(new VFXProperty(param.type, param.exposedName ),param.value);
+                    List<VFXPropertyAttribute> attributes = new List<VFXPropertyAttribute>();
+                    if (!string.IsNullOrEmpty(param.tooltip))
+                        attributes.Add(new VFXPropertyAttribute(VFXPropertyAttribute.Type.kTooltip, param.tooltip));
+
+                    if (param.hasRange)
+                        attributes.Add(new VFXPropertyAttribute(VFXPropertyAttribute.Type.kRange, (float)VFXConverter.ConvertTo(param.m_Min.Get(), typeof(float)), (float)VFXConverter.ConvertTo(param.m_Max.Get(), typeof(float))));
+
+                    yield return new VFXPropertyWithValue(new VFXProperty(param.type, param.exposedName, attributes.ToArray()), param.value);
                 }
             }
         }
