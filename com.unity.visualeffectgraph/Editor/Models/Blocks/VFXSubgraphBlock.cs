@@ -203,7 +203,9 @@ namespace UnityEditor.VFX
                 VFXGraph subGraph = m_Subgraph.GetResource().GetOrCreateGraph();
                 VFXBlockSubgraphContext blockContext = subGraph.children.OfType<VFXBlockSubgraphContext>().First();
                 VFXContext parent = GetParent();
-                if (parent == null || blockContext == null )
+                if (parent == null )
+                    return true;
+                if (blockContext == null)
                     return false;
 
                 return (blockContext.compatibleContextType & parent.contextType) == parent.contextType;
