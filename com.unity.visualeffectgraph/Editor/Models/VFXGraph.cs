@@ -626,6 +626,12 @@ namespace UnityEditor.VFX
                     m_ExpressionGraphDirty = false;
                 m_ExpressionValuesDirty = false;    
             }
+            else if(m_ExpressionGraphDirty && !preventRecompilation)
+            {
+                BuildSubgraphDependencies();
+                RecurseSubgraphRecreateCopy(this);
+                m_ExpressionGraphDirty = false;
+            }
             if(!preventDependencyRecompilation && m_DependentDirty)
             {
                 if (m_DependentDirty)
