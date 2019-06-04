@@ -87,10 +87,13 @@ namespace UnityEditor.VFX
         {
             get
             {
-                foreach( var block in m_SubBlocks)
+                if (m_SubBlocks != null)
                 {
-                    foreach (var attribute in block.attributes)
-                        yield return attribute;
+                    foreach (var block in m_SubBlocks)
+                    {
+                        foreach (var attribute in block.attributes)
+                            yield return attribute;
+                    }
                 }
             }
         }
