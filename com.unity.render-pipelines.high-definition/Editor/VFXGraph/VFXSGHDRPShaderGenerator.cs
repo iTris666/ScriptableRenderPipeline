@@ -438,7 +438,7 @@ struct VaryingVFXAttribute
                 if (currentPass == -1)
                     continue;
 
-                GeneratePath(vfxInfos, graph, guiVariables, defines, varyingAttributes, pass, currentPass, ref masterNodeInfo);
+                GeneratePass(vfxInfos, graph, guiVariables, defines, varyingAttributes, pass, currentPass, ref masterNodeInfo);
             }
             foreach (var define in defines)
                 document.InsertShaderCode(0, string.Format("#define {0} {1}", define.Key, define.Value));
@@ -773,14 +773,16 @@ struct VaryingVFXAttribute
             }
         }
 
-        private static void GeneratePath(VFXInfos vfxInfos, Graph graph, Dictionary<string, string> guiVariables, Dictionary<string, int> defines, List<VaryingAttribute> varyingAttributes, PassPart pass, int currentPass, ref MasterNodeInfo masterNodeInfo)
+        private static void GeneratePass(VFXInfos vfxInfos, Graph graph, Dictionary<string, string> guiVariables, Dictionary<string, int> defines, List<VaryingAttribute> varyingAttributes, PassPart pass, int currentPass, ref MasterNodeInfo masterNodeInfo)
         {
             Dictionary<string, int> passDefines = new Dictionary<string, int>();
             for (int i = 0; i < 4; ++i)
             {
                 if (graph.passes[currentPass].pixel.requirements.requiresMeshUVs.Contains((UVChannel)i))
                 {
-                    passDefines["_REQUIRE_UV" + i] = 1;
+                    passDefines["ATTRIBUTES_NEED_TEXCOORD" + i] = 1;
+                    passDefines["VARYINGS_NEED_TEXCOORD" + i] = 1;
+                    
                 }
                 else if (graph.passes[currentPass].vertex.requirements.requiresMeshUVs.Contains((UVChannel)i))
                     passDefines["ATTRIBUTES_NEED_TEXCOORD" + i] = 1;
