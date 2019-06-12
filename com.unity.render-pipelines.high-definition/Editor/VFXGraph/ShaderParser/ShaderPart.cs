@@ -248,7 +248,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
             foreach ( var charac in statement.Take(totalRange.end).Skip(valueStartIndex))
             {
-                if (singleLine && charac == '\n')
+                if (singleLine && (charac == '\n' || charac == '\r' ))
                     break;
                 valueEndIndex++;
                 if (singleLine)
