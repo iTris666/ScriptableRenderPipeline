@@ -332,7 +332,7 @@ struct ParticleMeshToPS
                     sb.AppendFormat("    nointerpolation {0} {1} : NORMAL{2};\n", TypeToCode(info.type), info.name, (texCoordNum++) - 10 + 2); //Start with NORMAL3
             }
             sb.Append(@"
-            uint instanceID : SV_InstanceID;
+            nointerpolation uint instanceID : SV_InstanceID;
 };");
             return sb.ToString();
         }
@@ -685,59 +685,23 @@ struct ParticleMeshToPS
                 passDefines["VARYINGS_NEED_COLOR"] = 1;
             }
 
-            var sb = new StringBuilder();
-            GenerateParticleVert(graph, vfxInfos, sb, currentPass, passDefines, varyingAttributes);
+
 
             pass.InsertShaderCode(0, GenerateVaryingVFXAttribute(graph, vfxInfos, varyingAttributes));
 
             foreach (var define in passDefines)
                 pass.InsertShaderCode(0, string.Format("#define {0} {1}", define.Key, define.Value));
 
-            /*string getSurfaceDataFunction = GenerateParticleGetSurfaceAndBuiltinData(graph, ref vfxInfos, currentPass, pass, guiVariables, defines, varyingAttributes,ref masterNodeInfo);
+            pass.InsertShaderCode(-1, @"#define VFX_VARYING_PS_INPUTS AttributesMesh
+#define VFX_VARYING_POSCS PositionOS
+#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""
+#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc""
+ByteAddressBuffer attributeBuffer;");
 
-            pass.ReplaceInclude(masterNodeInfo.litDataIncludePath, getSurfaceDataFunction);*/
+            var sb = new StringBuilder();
+            GenerateParticleVert(graph, vfxInfos, sb, currentPass, varyingAttributes);
             pass.InsertShaderCode(-1, sb.ToString());
             pass.RemoveShaderCodeContaining("#pragma vertex Vert");
-
-            // The hard part : replace the pass specific include with its contents where the call to GetSurfaceAndBuiltinData is replaced by a call to ParticleGetSurfaceAndBuiltinData
-            // with an additionnal second parameter ( the instanceID )
-            /*int index = pass.IndexOfLineMatching(@"\s*#include\s*""Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPass.*\.hlsl""\s*");
-
-            if (index >= 0)
-            {
-                string line = pass.shaderCode[index];
-                pass.shaderCode.RemoveAt(index);
-
-                int firstQuote = line.IndexOf('"');
-                string filePath = line.Substring(firstQuote + 1, line.LastIndexOf('"') - firstQuote - 1);
-
-                string passFile = File.ReadAllText(filePath);
-
-                // Replace calls to GetSurfaceAndBuiltinData to calls to ParticleGetSurfaceAndBuiltinData with an additionnal parameter
-                int callIndex = passFile.IndexOf("GetSurfaceAndBuiltinData(");
-                if (callIndex != -1)
-                {
-                    int endCallIndex = passFile.IndexOf(';', callIndex + 1);
-                    endCallIndex = passFile.LastIndexOf(')', endCallIndex) - 1;
-                    int paramStartIndex = callIndex + "GetSurfaceAndBuiltinData(".Length;
-
-                    string[] parameters = passFile.Substring(paramStartIndex, endCallIndex - paramStartIndex).Split(',');
-
-                    var ssb = new StringBuilder();
-
-                    ssb.Append(passFile.Substring(0, callIndex));
-                    ssb.Append("ParticleGetSurfaceAndBuiltinData(");
-
-                    var args = parameters.Take(1).Concat(Enumerable.Repeat("packedInput.vmesh.instanceID", 1)).Concat(Enumerable.Repeat("packedInput.vmesh.vfxAttributes", 1)).Concat(parameters.Skip(1));
-
-                    ssb.Append(args.Aggregate((a, b) => a + "," + b));
-
-                    ssb.Append(passFile.Substring(endCallIndex));
-
-                    pass.InsertShaderCode(index, ssb.ToString());
-                }
-
-            }*/
         }
 
         static string GenerateParticleGetSurfaceAndBuiltinData(Graph graph, ref VFXInfos vfxInfos, int currentPass, PassPart pass,Dictionary<string, string> guiVariables,Dictionary<string, int> defines , List<VaryingAttribute> varyingAttributes,ref MasterNodeInfo masterNodeInfo)
@@ -985,7 +949,7 @@ void ApplyVertexModification(AttributesMesh input, float3 normalWS, inout float3
             return getSurfaceDataFunction.ToString();
         }
 
-        private static void GenerateParticleVert(Graph graph,VFXInfos vfxInfos, StringBuilder shader, int currentPass, Dictionary<string, int> defines, List<VaryingAttribute> varyingAttributes)
+        private static void GenerateParticleVert(Graph graph,VFXInfos vfxInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)
         {
             shader.Append(vfxInfos.vertexFunctions);
 
@@ -1032,11 +996,7 @@ void ApplyVertexModification(AttributesMesh input, float3 normalWS, inout float3
                 }
 
             shader.AppendLine(@"
-#define VFX_VARYING_PS_INPUTS AttributesMesh
-#define VFX_VARYING_POSCS PositionOS
-#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""
-#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc""
-ByteAddressBuffer attributeBuffer;
+
 PackedVaryingsType ParticleVert(AttributesMesh inputMesh, uint instanceID : SV_InstanceID)
 {
     uint index = instanceID;
