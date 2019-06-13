@@ -12,6 +12,9 @@ struct PackedVaryingsToPS
     PackedVaryingsPassToPS vpass;
 #endif
     PackedVaryingsMeshToPS vmesh;
+#ifdef VFX_ACTIVE
+    ParticleMeshToPS vparticle;
+#endif
 
     UNITY_VERTEX_OUTPUT_STEREO
 };

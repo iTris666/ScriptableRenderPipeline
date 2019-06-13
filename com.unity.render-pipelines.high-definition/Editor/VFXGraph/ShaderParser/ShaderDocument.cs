@@ -102,6 +102,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             int endIndex = document.LastIndexOf('}');
             startIndex += 1; // skip '{' itself
 
+            shaderCode = new List<string>();
+
             while( ParseParameter(document,new RangeInt(startIndex, endIndex - startIndex),out paramName, out param) == 0)
             {
                 if (IsSame("Properties", document, paramName))
