@@ -332,7 +332,6 @@ struct ParticleMeshToPS
                     sb.AppendFormat("    nointerpolation {0} {1} : NORMAL{2};\n", TypeToCode(info.type), info.name, (texCoordNum++) - 10 + 2); //Start with NORMAL3
             }
             sb.Append(@"
-            nointerpolation uint instanceID : SV_InstanceID;
 };");
             return sb.ToString();
         }
@@ -429,6 +428,8 @@ struct ParticleMeshToPS
             var killPasses = new HashSet<string>();
 
             int cptLine = 0;
+            document.InsertShaderLine(cptLine++, "#define DEFAULT_UNITY_VERTEX_INPUT_INSTANCE_ID uint instanceID : SV_InstanceID;");
+            document.InsertShaderLine(cptLine++, "#define UNITY_VERTEX_INPUT_INSTANCE_ID uint instanceID : SV_InstanceID;");
             document.InsertShaderLine(cptLine++, "#include \"Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXDefines.hlsl\"");
 
             defines["VFX_ACTIVE"] = 1;
@@ -685,13 +686,14 @@ struct ParticleMeshToPS
                 passDefines["VARYINGS_NEED_COLOR"] = 1;
             }
 
-
+            
 
             pass.InsertShaderCode(0, GenerateVaryingVFXAttribute(graph, vfxInfos, varyingAttributes));
 
             foreach (var define in passDefines)
                 pass.InsertShaderCode(0, string.Format("#define {0} {1}", define.Key, define.Value));
 
+            
             pass.InsertShaderCode(-1, @"#define VFX_VARYING_PS_INPUTS AttributesMesh
 #define VFX_VARYING_POSCS PositionOS
 #include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""
@@ -997,9 +999,9 @@ void ApplyVertexModification(AttributesMesh input, float3 normalWS, inout float3
 
             shader.AppendLine(@"
 
-PackedVaryingsType ParticleVert(AttributesMesh inputMesh, uint instanceID : SV_InstanceID)
+PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
 {
-    uint index = instanceID;
+    uint index = inputMesh.instanceID;
 ".Replace("\n", "\n"));
             shader.Append("    " + vfxInfos.loadAttributes.Replace("\n", "\n    "));
 
@@ -1050,7 +1052,7 @@ PackedVaryingsType ParticleVert(AttributesMesh inputMesh, uint instanceID : SV_I
             }
 
             shader.Append(@"
-    result.vparticle.instanceID = instanceID; // transmit the instanceID to the pixel shader through the varyings
+    result.vmesh.instanceID = inputMesh.instanceID; // transmit the instanceID to the pixel shader through the varyings
     return result;
 }
 ");

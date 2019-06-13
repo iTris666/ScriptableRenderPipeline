@@ -8,13 +8,13 @@ struct VaryingsToPS
 
 struct PackedVaryingsToPS
 {
+#ifdef VFX_ACTIVE
+    ParticleMeshToPS vparticle;
+#endif
 #ifdef VARYINGS_NEED_PASS
     PackedVaryingsPassToPS vpass;
 #endif
     PackedVaryingsMeshToPS vmesh;
-#ifdef VFX_ACTIVE
-    ParticleMeshToPS vparticle;
-#endif
 
     UNITY_VERTEX_OUTPUT_STEREO
 };

@@ -28,6 +28,9 @@ struct FragInputs
 
     // For two sided lighting
     bool isFrontFace;
+#ifdef VFX_ACTIVE
+    uint instanceID;
+#endif
 };
 
 void GetVaryingsDataDebug(uint paramId, FragInputs input, inout float3 result, inout bool needLinearToSRGB)
