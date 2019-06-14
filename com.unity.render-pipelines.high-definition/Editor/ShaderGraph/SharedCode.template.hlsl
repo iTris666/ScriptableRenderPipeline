@@ -22,6 +22,10 @@
         $FragInputs.isFrontFace:        output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
         #endif // SHADER_STAGE_FRAGMENT
 
+        #if UNITY_VFX_ACTIVE
+        output.particleID = input.particleID;
+        #endif
+
         return output;
     }
 

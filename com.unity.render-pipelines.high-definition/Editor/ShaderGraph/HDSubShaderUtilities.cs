@@ -156,6 +156,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             [Optional] Vector4 VertexColor;
             [Optional] float FaceSign;
 
+            [PreprocessorIf("UNITY_VFX_ACTIVE")] uint particleID;
+
             public static Dependency[] dependencies = new Dependency[]
             {
                 new Dependency("SurfaceDescriptionInputs.WorldSpaceNormal",          "FragInputs.tangentToWorld"),

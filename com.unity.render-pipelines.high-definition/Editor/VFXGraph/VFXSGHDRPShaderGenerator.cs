@@ -685,7 +685,6 @@ struct ParticleMeshToPS
             }
 
             
-
             pass.InsertShaderCode(0, GenerateVaryingVFXAttribute(graph, vfxInfos, varyingAttributes));
 
             foreach (var define in passDefines)
@@ -702,6 +701,17 @@ ByteAddressBuffer attributeBuffer;");
             GenerateParticleVert(graph, vfxInfos, sb, currentPass, varyingAttributes);
             pass.InsertShaderCode(-1, sb.ToString());
             pass.RemoveShaderCodeContaining("#pragma vertex Vert");
+
+            // Add attributes acess to pixel shader function : SurfaceDescriptionFunction
+
+            int functionIndex;
+            List<string> functionFragInputsToSurfaceDescriptionInputs = pass.ExtractFunction("SurfaceDescriptionInputs", "FragInputsToSurfaceDescriptionInputs", out functionIndex, "FragInputs", "input", "float3", "viewWS");
+
+            for (int i = 0; i < functionFragInputsToSurfaceDescriptionInputs.Count; ++i)
+            {
+                pass.InsertShaderCode(i + functionIndex,functionFragInputsToSurfaceDescriptionInputs[i]);
+            }
+            
         }
 
         static string GenerateParticleGetSurfaceAndBuiltinData(Graph graph, ref VFXInfos vfxInfos, int currentPass, PassPart pass,Dictionary<string, string> guiVariables,Dictionary<string, int> defines , List<VaryingAttribute> varyingAttributes,ref MasterNodeInfo masterNodeInfo)

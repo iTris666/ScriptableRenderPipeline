@@ -70,6 +70,21 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             }
         }
 
+        public List<string> ExtractFunction(string returnType, string name,out int foundAtIndex ,params string[] parameters)
+        {
+            string functionDefMatch = @"^\s*" + returnType + @"\s+" + name + @"\s*\(";
+            for(int i = 0; i < parameters.Length >> 1; ++i)
+                functionDefMatch += @"\s*" + parameters[i * 2] + @"\s+" + parameters[i * 2 + 1] +((((parameters.Length >> 1) - 1) == i) ? "" : @"\s*\,\s*");
+            functionDefMatch += @"\s*\)\s*$";
+
+            int functionDefinitionIndex = IndexOfLineMatching(functionDefMatch);
+
+            List<string> list = new List<string>();
+            foundAtIndex = functionDefinitionIndex;
+
+            return list;
+        }
+
         public int IndexOfLineMatching(string str)
         {
             Regex rx = new Regex(str,RegexOptions.Compiled);
