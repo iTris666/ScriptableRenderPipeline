@@ -32,6 +32,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             [Semantic("TEXCOORD3")][Optional]       Vector4 uv3;
             [Semantic("COLOR")][Optional]           Vector4 color;
             [Semantic("INSTANCEID_SEMANTIC")] [PreprocessorIf("UNITY_ANY_INSTANCING_ENABLED")] uint instanceID;
+            [Semantic("SV_InstanceID")] [PreprocessorIf("UNITY_VFX_ACTIVE")] uint particleID;
         };
 
         [InterpolatorPack]
@@ -47,6 +48,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             [Optional]                                                              Vector4 texCoord3;
             [Optional]                                                              Vector4 color;
             [Semantic("CUSTOM_INSTANCE_ID")] [PreprocessorIf("UNITY_ANY_INSTANCING_ENABLED")] uint instanceID;
+            [Semantic("CUSTOM_INSTANCE_ID")] [PreprocessorIf("UNITY_VFX_ACTIVE")]   uint particleID;
             [Semantic("FRONT_FACE_SEMANTIC")][OverrideType("FRONT_FACE_TYPE")][PreprocessorIf("defined(SHADER_STAGE_FRAGMENT) && defined(VARYINGS_NEED_CULLFACE)")] bool cullFace;
 
             public static Dependency[] tessellationDependencies = new Dependency[]
@@ -73,6 +75,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 new Dependency("VaryingsMeshToPS.texCoord3",        "AttributesMesh.uv3"),
                 new Dependency("VaryingsMeshToPS.color",            "AttributesMesh.color"),
                 new Dependency("VaryingsMeshToPS.instanceID",       "AttributesMesh.instanceID"),
+                new Dependency("VaryingsMeshToPS.particleID",       "AttributesMesh.particleID"),
             };
         };
 

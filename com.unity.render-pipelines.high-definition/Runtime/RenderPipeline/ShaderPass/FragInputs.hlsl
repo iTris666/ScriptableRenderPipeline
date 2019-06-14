@@ -28,8 +28,8 @@ struct FragInputs
 
     // For two sided lighting
     bool isFrontFace;
-#ifdef VFX_ACTIVE
-    uint instanceID;
+#ifdef UNITY_VFX_ACTIVE
+    uint particleID;
 #endif
 };
 

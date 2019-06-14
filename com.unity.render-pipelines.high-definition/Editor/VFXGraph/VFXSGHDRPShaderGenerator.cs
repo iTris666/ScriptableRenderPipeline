@@ -428,11 +428,9 @@ struct ParticleMeshToPS
             var killPasses = new HashSet<string>();
 
             int cptLine = 0;
-            document.InsertShaderLine(cptLine++, "#define DEFAULT_UNITY_VERTEX_INPUT_INSTANCE_ID uint instanceID : SV_InstanceID;");
-            document.InsertShaderLine(cptLine++, "#define UNITY_VERTEX_INPUT_INSTANCE_ID uint instanceID : SV_InstanceID;");
             document.InsertShaderLine(cptLine++, "#include \"Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXDefines.hlsl\"");
 
-            defines["VFX_ACTIVE"] = 1;
+            defines["UNITY_VFX_ACTIVE"] = 1;
 
             masterNodeInfo.prepareMasterNode(graph, guiVariables, defines);
 
@@ -1001,7 +999,7 @@ void ApplyVertexModification(AttributesMesh input, float3 normalWS, inout float3
 
 PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
 {
-    uint index = inputMesh.instanceID;
+    uint index = inputMesh.particleID;
 ".Replace("\n", "\n"));
             shader.Append("    " + vfxInfos.loadAttributes.Replace("\n", "\n    "));
 
@@ -1052,7 +1050,7 @@ PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
             }
 
             shader.Append(@"
-    result.vmesh.instanceID = inputMesh.instanceID; // transmit the instanceID to the pixel shader through the varyings
+    result.vmesh.particleID = inputMesh.particleID; // transmit the instanceID to the pixel shader through the varyings
     return result;
 }
 ");

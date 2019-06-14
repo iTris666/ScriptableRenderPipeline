@@ -8,7 +8,7 @@ struct VaryingsToPS
 
 struct PackedVaryingsToPS
 {
-#ifdef VFX_ACTIVE
+#ifdef UNITY_VFX_ACTIVE
     ParticleMeshToPS vparticle;
 #endif
 #ifdef VARYINGS_NEED_PASS

@@ -33,8 +33,8 @@ void Frag(  PackedVaryingsToPS packedInput,
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(packedInput);
     FragInputs input = UnpackVaryingsMeshToFragInputs(packedInput.vmesh);
-#if VFX_ACTIVE
-    input.instanceID = packedInput.vparticle.instanceID;
+#ifdef UNITY_VFX_ACTIVE
+    input.particleID = packedInput.vparticle.particleID;
 #endif
 
     // input.positionSS is SV_Position

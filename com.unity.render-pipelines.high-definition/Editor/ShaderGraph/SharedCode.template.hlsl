@@ -68,8 +68,8 @@
         UNITY_SETUP_INSTANCE_ID(input);
         VaryingsMeshToPS unpacked= UnpackVaryingsMeshToPS(input);
         FragInputs fragInputs = BuildFragInputs(unpacked);
-#ifdef VFX_ACTIVE
-        fragInputs.instanceID = input.instanceID;
+#ifdef UNITY_VFX_ACTIVE
+        fragInputs.particleID = input.particleID;
 #endif
         return fragInputs;
     }
