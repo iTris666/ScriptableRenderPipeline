@@ -707,11 +707,15 @@ ByteAddressBuffer attributeBuffer;");
             int functionIndex;
             List<string> functionFragInputsToSurfaceDescriptionInputs = pass.ExtractFunction("SurfaceDescriptionInputs", "FragInputsToSurfaceDescriptionInputs", out functionIndex, "FragInputs", "input", "float3", "viewWS");
 
-            for (int i = 0; i < functionFragInputsToSurfaceDescriptionInputs.Count; ++i)
+            if(functionFragInputsToSurfaceDescriptionInputs != null)
             {
-                pass.InsertShaderCode(i + functionIndex,functionFragInputsToSurfaceDescriptionInputs[i]);
+                for (int i = 0; i < functionFragInputsToSurfaceDescriptionInputs.Count; ++i)
+                {
+                   pass.InsertShaderLine(i + functionIndex,functionFragInputsToSurfaceDescriptionInputs[i]);
+                }
+
             }
-            
+
         }
 
         static string GenerateParticleGetSurfaceAndBuiltinData(Graph graph, ref VFXInfos vfxInfos, int currentPass, PassPart pass,Dictionary<string, string> guiVariables,Dictionary<string, int> defines , List<VaryingAttribute> varyingAttributes,ref MasterNodeInfo masterNodeInfo)

@@ -78,9 +78,23 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             functionDefMatch += @"\s*\)\s*$";
 
             int functionDefinitionIndex = IndexOfLineMatching(functionDefMatch);
-
-            List<string> list = new List<string>();
             foundAtIndex = functionDefinitionIndex;
+            if (functionDefinitionIndex == -1)
+                return null;
+            if(shaderCode.Count <= functionDefinitionIndex +2)
+                return null;
+            if (shaderCode[functionDefinitionIndex + 1].Trim() != "{")
+                return null;
+
+            int endIndex = functionDefinitionIndex + 2;
+            while (endIndex < shaderCode.Count && shaderCode[endIndex].Trim() != "}")
+                ++endIndex;
+
+            if (endIndex == shaderCode.Count)
+                return null;
+
+            List<string> list = shaderCode.GetRange(functionDefinitionIndex,endIndex - functionDefinitionIndex + 1);
+            shaderCode.RemoveRange(functionDefinitionIndex, endIndex - functionDefinitionIndex + 1);
 
             return list;
         }
