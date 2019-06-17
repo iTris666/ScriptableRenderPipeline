@@ -8,7 +8,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
     class FabricSubShader : IFabricSubShader
     {
-        Pass m_PassMETA = new Pass()
+        internal static Pass passMETA { get { return m_PassMETA; } }
+
+
+        static Pass m_PassMETA = new Pass()
         {
             Name = "META",
             LightMode = "META",
@@ -52,8 +55,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             },
             UseInPreview = false,
         };
+        internal static Pass passShadowCaster { get { return m_PassShadowCaster; } }
 
-        Pass m_PassShadowCaster = new Pass()
+        static Pass m_PassShadowCaster = new Pass()
         {
             Name = "ShadowCaster",
             LightMode = "ShadowCaster",
@@ -82,7 +86,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             UseInPreview = false,
         };
 
-        Pass m_SceneSelectionPass = new Pass()
+        internal static Pass passSceneSelection { get { return m_SceneSelectionPass; } }
+        static Pass m_SceneSelectionPass = new Pass()
         {
             Name = "SceneSelectionPass",
             LightMode = "SceneSelectionPass",
@@ -112,7 +117,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             UseInPreview = false
         };
 
-        Pass m_PassDepthForwardOnly = new Pass()
+        internal static Pass passDepthForwardOnly { get { return m_PassDepthForwardOnly; } }
+        static Pass m_PassDepthForwardOnly = new Pass()
         {
             Name = "DepthForwardOnly",
             LightMode = "DepthForwardOnly",
@@ -168,7 +174,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }           
         };
 
-        Pass m_PassMotionVectors = new Pass()
+        internal static Pass passMotionVectors { get { return m_PassMotionVectors; } }
+        static Pass m_PassMotionVectors = new Pass()
         {
             Name = "MotionVectors",
             LightMode = "MotionVectors",
@@ -219,8 +226,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 HDSubShaderUtilities.SetStencilStateForMotionVector(ref pass);
             }
         };
-
-        Pass m_PassForwardOnly = new Pass()
+        internal static Pass passForwardOnly { get { return m_PassForwardOnly; } }
+        static Pass m_PassForwardOnly = new Pass()
         {
             Name = "ForwardOnly",
             LightMode = "ForwardOnly",
