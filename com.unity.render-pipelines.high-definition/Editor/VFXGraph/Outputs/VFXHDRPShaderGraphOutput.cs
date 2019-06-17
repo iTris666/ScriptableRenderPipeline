@@ -64,7 +64,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
         public override VFXTaskType taskType { get { return VFXTaskType.ParticleMeshOutput; } }
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InGraph), SerializeField]
-        protected Shader m_ShaderGraph;
+        protected Shader m_ShaderGraph = null;
 
         public Shader shaderGraph
         {

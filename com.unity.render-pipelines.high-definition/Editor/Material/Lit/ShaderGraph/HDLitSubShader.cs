@@ -8,7 +8,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
     class HDLitSubShader : IHDLitSubShader
     {
-        internal static Pass passGBuffer { get { return m_PassGBuffer; } }
+        internal static Pass passGBuffer => m_PassGBuffer;
         static Pass m_PassGBuffer = new Pass()
         {
             Name = "GBuffer",
@@ -89,7 +89,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                     pass.ExtraDefines.Add("#ifndef DEBUG_DISPLAY\n#define SHADERPASS_GBUFFER_BYPASS_ALPHA_TEST\n#endif");
             }
         };
-        internal static Pass passMETA { get { return m_PassMETA; } }
+        internal static Pass passMETA => m_PassMETA;
         static Pass m_PassMETA = new Pass()
         {
             Name = "META",
@@ -146,7 +146,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         };
 
 
-        internal static Pass passShadowCaster { get { return m_PassShadowCaster; } }
+        internal static Pass passShadowCaster => m_PassShadowCaster;
 
         static Pass m_PassShadowCaster = new Pass()
         {
@@ -177,7 +177,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             UseInPreview = false,
         };
 
-        internal static Pass passSceneSelection {get{return m_SceneSelectionPass;} }
+        internal static Pass passSceneSelection => m_SceneSelectionPass;
 
         static Pass m_SceneSelectionPass = new Pass()
         {
@@ -208,7 +208,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             },
             UseInPreview = false
         };
-        static internal Pass passDepthOnly { get { return m_PassDepthOnly; } }
+        static internal Pass passDepthOnly => m_PassDepthOnly;
 
         static Pass m_PassDepthOnly = new Pass()
         {
