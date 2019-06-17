@@ -99,11 +99,11 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             return list;
         }
 
-        public int IndexOfLineMatching(string str)
+        public int IndexOfLineMatching(string str,int startIndex = 0)
         {
             Regex rx = new Regex(str,RegexOptions.Compiled);
 
-            return shaderCode.FindIndex(t => rx.IsMatch(t));
+            return shaderCode.FindIndex(startIndex,t => rx.IsMatch(t));
         }
 
         public void InsertShaderLine(int index,string line)

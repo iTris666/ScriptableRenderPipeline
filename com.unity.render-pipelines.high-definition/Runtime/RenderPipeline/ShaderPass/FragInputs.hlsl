@@ -29,6 +29,7 @@ struct FragInputs
     // For two sided lighting
     bool isFrontFace;
 #ifdef UNITY_VFX_ACTIVE
+    ParticleMeshToPS vparticle;
     uint particleID;
 #endif
 };

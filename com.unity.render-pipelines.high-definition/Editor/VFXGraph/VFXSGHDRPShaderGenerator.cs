@@ -694,8 +694,7 @@ struct ParticleMeshToPS
             pass.InsertShaderCode(-1, @"#define VFX_VARYING_PS_INPUTS AttributesMesh
 #define VFX_VARYING_POSCS PositionOS
 #include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""
-#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc""
-ByteAddressBuffer attributeBuffer;");
+#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc""");
 
             var sb = new StringBuilder();
             GenerateParticleVert(graph, vfxInfos, sb, currentPass, varyingAttributes);
@@ -709,9 +708,89 @@ ByteAddressBuffer attributeBuffer;");
 
             if(functionFragInputsToSurfaceDescriptionInputs != null)
             {
-                for (int i = 0; i < functionFragInputsToSurfaceDescriptionInputs.Count; ++i)
-                {
+                for (int i = 0; i < functionFragInputsToSurfaceDescriptionInputs.Count - 2; ++i)
+                { 
                    pass.InsertShaderLine(i + functionIndex,functionFragInputsToSurfaceDescriptionInputs[i]);
+                }
+                pass.InsertShaderLine(functionIndex + functionFragInputsToSurfaceDescriptionInputs.Count - 2, "                output.particleID = input.particleID;");
+                for (int i = functionFragInputsToSurfaceDescriptionInputs.Count - 2; i < functionFragInputsToSurfaceDescriptionInputs.Count; ++i)
+                {
+                    pass.InsertShaderLine(i + functionIndex + 1, functionFragInputsToSurfaceDescriptionInputs[i]);
+                }
+            }
+
+
+            int cBuffer = pass.IndexOfLineMatching(@"CBUFFER_START");
+            if( cBuffer != -1)
+            {
+                int cBufferEnd = pass.IndexOfLineMatching(@"CBUFFER_END", cBuffer);
+
+                if (cBufferEnd != -1)
+                {
+                    ++cBufferEnd;
+
+                    while (string.IsNullOrWhiteSpace(pass.shaderCode[cBufferEnd]) || pass.shaderCode[cBufferEnd].Contains("TEXTURE2D("))
+                    {
+                        pass.shaderCode.RemoveAt(cBufferEnd);
+                    }
+                    pass.shaderCode.RemoveRange(cBuffer, cBufferEnd - cBuffer + 1);
+                }
+
+                pass.InsertShaderCode(cBuffer, vfxInfos.parameters);
+            }
+
+            
+
+
+            int surfaceDescCall = pass.IndexOfLineMatching(@"SurfaceDescription\s+surfaceDescription\s*=\s*SurfaceDescriptionFunction\s*\(\s*surfaceDescriptionInputs\s*\)\;");
+            if(surfaceDescCall != -1)
+            {
+                pass.shaderCode[surfaceDescCall] = @"SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(surfaceDescriptionInputs,fragInputs.vparticle);";
+            }
+
+            List<string> functionSurfaceDefinition = pass.ExtractFunction("SurfaceDescription", "SurfaceDescriptionFunction", out functionIndex, "SurfaceDescriptionInputs", "IN");
+
+            if(functionSurfaceDefinition != null)
+            {
+                pass.InsertShaderLine(functionIndex - 1, "ByteAddressBuffer attributeBuffer;");
+
+                functionSurfaceDefinition[0] = "SurfaceDescription SurfaceDescriptionFunction(SurfaceDescriptionInputs IN,ParticleMeshToPS vParticle)";
+
+                for (int i = 0; i < 2; ++i)
+                {
+                    pass.InsertShaderLine(i + functionIndex, functionSurfaceDefinition[i]);
+                }
+                int cptLine = 2;
+                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    uint index = IN.particleID;");
+                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    " + vfxInfos.loadAttributes.Replace("\n", "\n                                    "));
+
+                // override attribute load with value from varyings in case of attriibute values modified in output context
+                foreach (var varyingAttribute in varyingAttributes)
+                {
+                    pass.InsertShaderLine((cptLine++) + functionIndex, string.Format("{0} = vParticle.{0};", varyingAttribute.name));
+                }
+                PropertyCollector shaderProperties = new PropertyCollector();
+
+                graph.graphData.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
+                foreach (var prop in shaderProperties.properties)
+                {
+                    string matchingAttribute = vfxInfos.attributes.FirstOrDefault(t => prop.displayName.Equals(t, StringComparison.InvariantCultureIgnoreCase));
+                    if (matchingAttribute != null)
+                    {
+                        if (matchingAttribute == "color")
+                            pass.InsertShaderLine((cptLine++) + functionIndex, "    " + prop.GetPropertyDeclarationString("") + " = float4(color,1);");
+                        else
+                            pass.InsertShaderLine((cptLine++) + functionIndex, "    " + prop.GetPropertyDeclarationString("") + " = " + matchingAttribute + ";");
+                    }
+                }
+                pass.InsertShaderLine((cptLine++) + functionIndex, @"
+
+    if( !alive) discard;
+    ");
+
+                for (int i = 2; i < functionSurfaceDefinition.Count; ++i)
+                {
+                    pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
                 }
 
             }
