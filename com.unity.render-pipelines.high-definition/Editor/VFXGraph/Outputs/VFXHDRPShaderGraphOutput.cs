@@ -127,7 +127,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 return null;
 
             var sb = new StringBuilder();
-            string result = VFXSGHDRPShaderGenerator.NewGenerateShader(shaderGraph, ref infos);
+            string result = VFXSGHDRPShaderGenerator.GenerateShader(shaderGraph, ref infos);
             if( result != null)
                 sb.Append( result);
             return sb;

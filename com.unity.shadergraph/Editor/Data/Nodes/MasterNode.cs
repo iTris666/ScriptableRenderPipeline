@@ -101,7 +101,7 @@ namespace UnityEditor.ShaderGraph
 
                 finalShader.AppendLine(@"FallBack ""Hidden/InternalErrorShader""");
             }
-            configuredTextures = shaderProperties.GetConfiguredTexutres();
+            configuredTextures = shaderProperties.GetConfiguredTextures();
             return finalShader.ToString();
         }
 

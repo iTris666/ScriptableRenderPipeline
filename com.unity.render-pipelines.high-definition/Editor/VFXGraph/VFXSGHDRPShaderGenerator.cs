@@ -2,17 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Globalization;
 using System.Text;
+
 using UnityEditor.Graphing;
 using UnityEditor.Graphing.Util;
-using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEditor.ShaderGraph;
 using UnityEditor.VFX;
+using UnityEngine;
 using UnityEngine.Experimental.Rendering.HDPipeline;
-using UnityEngine.Experimental.VFX;
-using UnityEditor.ShaderGraph.Drawing.Controls;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 {
@@ -27,7 +24,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             internal struct Function
             {
                 internal List<AbstractMaterialNode> nodes;
-                internal ShaderGraphRequirements requirements;
                 internal List<MaterialSlot> slots;
             }
 
@@ -38,8 +34,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             }
 
             internal Pass[] passes;
-
-
 
             internal class PassInfo
             {
@@ -138,17 +132,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             return null;
         }
 
-        public static Dictionary<string,Texture> GetUsedTextures(Graph graph)
-        {
-            var shaderProperties = new PropertyCollector();
-            foreach (var node in graph.passes.SelectMany(t => t.pixel.nodes.Concat(t.vertex.nodes)).Distinct())
-            {
-                node.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
-            }
-
-            return shaderProperties.GetConfiguredTexutres().ToDictionary(t=>t.name,t=>(Texture)EditorUtility.InstanceIDToObject(t.textureId));
-        }
-
         static Graph LoadShaderGraph(string shaderFilePath, out MasterNodeInfo masterNodeInfo)
         {
             var textGraph = File.ReadAllText(shaderFilePath, Encoding.UTF8);
@@ -183,19 +166,24 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 NodeUtils.DepthFirstCollectNodesFromNode(graph.passes[currentPass].pixel.nodes, ((AbstractMaterialNode)graph.graphData.outputNode), NodeUtils.IncludeSelf.Include, passInfos[currentPass].pixel.activeSlots);
                 graph.passes[currentPass].vertex.nodes = ListPool<AbstractMaterialNode>.Get();
                 NodeUtils.DepthFirstCollectNodesFromNode(graph.passes[currentPass].vertex.nodes, ((AbstractMaterialNode)graph.graphData.outputNode), NodeUtils.IncludeSelf.Include, passInfos[currentPass].vertex.activeSlots);
-
-                graph.passes[currentPass].pixel.requirements = ShaderGraphRequirements.FromNodes(graph.passes[currentPass].pixel.nodes, ShaderStageCapability.Fragment, false);
-                graph.passes[currentPass].vertex.requirements = ShaderGraphRequirements.FromNodes(graph.passes[currentPass].vertex.nodes, ShaderStageCapability.Vertex, false);
-
-                graph.passes[currentPass].pixel.requirements.requiresPosition |= NeededCoordinateSpace.View | NeededCoordinateSpace.World;
-                graph.passes[currentPass].vertex.requirements.requiresPosition |= NeededCoordinateSpace.Object;
-
                 graph.passes[currentPass].pixel.slots = graph.slots.Where(t => passInfos[currentPass].pixel.activeSlots.Contains(t.id)).ToList();
                 graph.passes[currentPass].vertex.slots = graph.slots.Where(t => passInfos[currentPass].vertex.activeSlots.Contains(t.id)).ToList();
             }
             
             return graph;
         }
+
+        public static Dictionary<string, Texture> GetUsedTextures(Graph graph)
+        {
+            var shaderProperties = new PropertyCollector();
+            foreach (var node in graph.passes.SelectMany(t => t.pixel.nodes.Concat(t.vertex.nodes)).Distinct())
+            {
+                node.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
+            }
+
+            return shaderProperties.GetConfiguredTextures().ToDictionary(t => t.name, t => (Texture)EditorUtility.InstanceIDToObject(t.textureId));
+        }
+
         public static List<string> GetPropertiesExcept(Graph graph, List<string> attributes)
         {
             var shaderProperties = new PropertyCollector();
@@ -329,7 +317,7 @@ struct ParticleMeshToPS
         };
 
 
-        internal static string NewGenerateShader(Shader shaderGraph, ref VFXInfos vfxInfos)
+        internal static string GenerateShader(Shader shaderGraph, ref VFXInfos vfxInfos)
         {
             MasterNodeInfo masterNodeInfo;
             Graph graph = LoadShaderGraph(shaderGraph, out masterNodeInfo);
@@ -369,11 +357,7 @@ struct ParticleMeshToPS
             ShaderDocument document = new ShaderDocument();
             document.Parse(graph.shaderCode);
 
-
-            File.WriteAllText("c:\\unity\\toto.shader", document.ToString(true));
-
             var defines = new Dictionary<string, int>();
-            var killPasses = new HashSet<string>();
 
             masterNodeInfo.prepare(graph, guiVariables, defines);
 
@@ -383,7 +367,6 @@ struct ParticleMeshToPS
             defines["UNITY_VFX_ACTIVE"] = 1;
 
             List<VaryingAttribute> varyingAttributes = ComputeVaryingAttribute(graph, vfxInfos);
-
 
             foreach (var pass in document.passes)
             {
@@ -398,7 +381,7 @@ struct ParticleMeshToPS
 
             document.ReplaceParameterVariables(guiVariables);
 
-            return document.ToString(false).Replace("$precision", "float").Replace("\r", "");
+            return document.ToString(false).Replace("\r", "");
         }
 
         private static void PrepareHDLitMasterNode(Graph graph, Dictionary<string, string> guiVariables, Dictionary<string, int> defines)
@@ -791,33 +774,10 @@ struct ParticleMeshToPS
 
         private static void GeneratePass(VFXInfos vfxInfos, Graph graph, Dictionary<string, string> guiVariables, Dictionary<string, int> defines, List<VaryingAttribute> varyingAttributes, PassPart pass, int currentPass, ref MasterNodeInfo masterNodeInfo)
         {
-            Dictionary<string, int> passDefines = new Dictionary<string, int>();
-            for (int i = 0; i < 4; ++i)
-            {
-                if (graph.passes[currentPass].pixel.requirements.requiresMeshUVs.Contains((UVChannel)i))
-                {
-                    passDefines["ATTRIBUTES_NEED_TEXCOORD" + i] = 1;
-                    passDefines["VARYINGS_NEED_TEXCOORD" + i] = 1;
-                    
-                }
-                else if (graph.passes[currentPass].vertex.requirements.requiresMeshUVs.Contains((UVChannel)i))
-                    passDefines["ATTRIBUTES_NEED_TEXCOORD" + i] = 1;
-            }
-            if (graph.passes[currentPass].pixel.requirements.requiresVertexColor)
-            {
-                passDefines["ATTRIBUTES_NEED_COLOR"] = 1;
-                passDefines["VARYINGS_NEED_COLOR"] = 1;
-            }
-
-            
             pass.InsertShaderCode(0, GenerateVaryingVFXAttribute(graph, vfxInfos, varyingAttributes));
-
-            foreach (var define in passDefines)
-                pass.InsertShaderCode(0, string.Format("#define {0} {1}", define.Key, define.Value));
-
             
-            pass.InsertShaderCode(-1, @"#define VFX_VARYING_PS_INPUTS AttributesMesh
-#define VFX_VARYING_POSCS PositionOS
+            pass.InsertShaderCode(-1, @"#define VFX_VARYING_PS_INPUTS VaryingsMeshToDS
+#define VFX_VARYING_POSCS positionRWS
 #include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""
 #include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc""");
 
@@ -826,8 +786,7 @@ struct ParticleMeshToPS
             pass.InsertShaderCode(-1, sb.ToString());
             pass.RemoveShaderCodeContaining("#pragma vertex Vert");
 
-            // Add attributes acess to pixel shader function : SurfaceDescriptionFunction
-
+            // Pass particleID to pixel shader function : SurfaceDescriptionFunction
             int functionIndex;
             List<string> functionFragInputsToSurfaceDescriptionInputs = pass.ExtractFunction("SurfaceDescriptionInputs", "FragInputsToSurfaceDescriptionInputs", out functionIndex, "FragInputs", "input", "float3", "viewWS");
 
@@ -844,7 +803,7 @@ struct ParticleMeshToPS
                 }
             }
 
-
+            //Replace CBUFFER and TEXTURE bindings by the one from the VFX
             int cBuffer = pass.IndexOfLineMatching(@"CBUFFER_START");
             if( cBuffer != -1)
             {
@@ -863,16 +822,14 @@ struct ParticleMeshToPS
 
                 pass.InsertShaderCode(cBuffer, vfxInfos.parameters);
             }
-
-            
-
-
+            // pass VParticle varyings as additionnal parameter to SurfaceDescriptionFunction
             int surfaceDescCall = pass.IndexOfLineMatching(@"SurfaceDescription\s+surfaceDescription\s*=\s*SurfaceDescriptionFunction\s*\(\s*surfaceDescriptionInputs\s*\)\;");
             if(surfaceDescCall != -1)
             {
                 pass.shaderCode[surfaceDescCall] = @"SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(surfaceDescriptionInputs,fragInputs.vparticle);";
             }
 
+            // Inject attribute load code to SurfaceDescriptionFunction
             List<string> functionSurfaceDefinition = pass.ExtractFunction("SurfaceDescription", "SurfaceDescriptionFunction", out functionIndex, "SurfaceDescriptionInputs", "IN");
 
             if(functionSurfaceDefinition != null)
@@ -886,6 +843,7 @@ struct ParticleMeshToPS
                     pass.InsertShaderLine(i + functionIndex, functionSurfaceDefinition[i]);
                 }
                 int cptLine = 2;
+                //Load attributes from the ByteAddressBuffer
                 pass.InsertShaderLine((cptLine++) + functionIndex, "                                    uint index = IN.particleID;");
                 pass.InsertShaderLine((cptLine++) + functionIndex, "                                    " + vfxInfos.loadAttributes.Replace("\n", "\n                                    "));
 
@@ -894,8 +852,9 @@ struct ParticleMeshToPS
                 {
                     pass.InsertShaderLine((cptLine++) + functionIndex, string.Format("{0} = vParticle.{0};", varyingAttribute.name));
                 }
-                PropertyCollector shaderProperties = new PropertyCollector();
 
+                // define variable for each value that is a vfx attribute
+                PropertyCollector shaderProperties = new PropertyCollector();
                 graph.graphData.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
                 foreach (var prop in shaderProperties.properties)
                 {
@@ -913,45 +872,35 @@ struct ParticleMeshToPS
     if( !alive) discard;
     ");
 
-                for (int i = 2; i < functionSurfaceDefinition.Count; ++i)
+                for (int i = 2; i < functionSurfaceDefinition.Count - 2; ++i)
                 {
                     pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
                 }
+                if ( vfxInfos.attributes.Contains("alpha") )
+                    pass.InsertShaderLine((cptLine++) + functionIndex, "                        surface.Alpha *= alpha;");
 
+                for (int i = functionSurfaceDefinition.Count - 2; i < functionSurfaceDefinition.Count; ++i)
+                {
+                    pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
+                }
             }
 
         }
 
         private static void GenerateParticleVert(Graph graph,VFXInfos vfxInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)
         {
+            // ParticleVert will replace the standard HDRP Vert function as vertex function
+
+            // add functions from the vfx nodes
             shader.Append(vfxInfos.vertexFunctions);
 
-            //PropertyCollector shaderProperties = new PropertyCollector();
             var sb = new StringBuilder();
-            // inspired by GenerateSurfaceDescriptionFunction
 
             ShaderStringBuilder functionsString = new ShaderStringBuilder();
             FunctionRegistry functionRegistry = new FunctionRegistry(functionsString);
 
-            //graph.graphData.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
-
             var sg = new ShaderStringBuilder();
-            /*
-            GraphContext graphContext = new GraphContext("SurfaceDescriptionInputs");
-
-            foreach (var activeNode in graph.passes[currentPass].vertex.nodes.OfType<AbstractMaterialNode>())
-            {
-                if (activeNode is IGeneratesFunction)
-                {
-                    functionRegistry.builder.currentNode = activeNode;
-                    (activeNode as IGeneratesFunction).GenerateNodeFunction(functionRegistry, graphContext, GenerationMode.ForReals);
-                }
-                if (activeNode is IGeneratesBodyCode)
-                    (activeNode as IGeneratesBodyCode).GenerateNodeCode(sg, graphContext, GenerationMode.ForReals);
-
-                activeNode.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
-            }*/
-
+            // add function from the sg nodes
             shader.AppendLine(functionsString.ToString());
             functionRegistry.builder.currentNode = null;
 
@@ -999,18 +948,20 @@ PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
                 }
             }
 
+            // override the positionOS with the particle position and call the standard Vert function
             shader.Append(@"    particlePos = mul(elementToVFX,float4(objectPos,1)).xyz;
     inputMesh.positionOS = particlePos;
-
     PackedVaryingsType result = Vert(inputMesh);
 ");
 
+            //transfer modified attributes in the vfx output as varyings
             foreach (var varyingAttribute in varyingAttributes)
             {
                 shader.AppendFormat(@"
     result.vparticle.{0} = {0};", varyingAttribute.name);
             }
 
+            // transfer particle ID
             shader.Append(@"
     result.vmesh.particleID = inputMesh.particleID; // transmit the instanceID to the pixel shader through the varyings
     return result;

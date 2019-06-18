@@ -1132,7 +1132,7 @@ namespace UnityEditor.ShaderGraph
             // -------------------------------------
             // Finalize
 
-            results.configuredTextures = shaderProperties.GetConfiguredTexutres();
+            results.configuredTextures = shaderProperties.GetConfiguredTextures();
             ShaderSourceMap sourceMap;
             results.shader = finalShader.ToString(out sourceMap);
             results.sourceMap = sourceMap;
