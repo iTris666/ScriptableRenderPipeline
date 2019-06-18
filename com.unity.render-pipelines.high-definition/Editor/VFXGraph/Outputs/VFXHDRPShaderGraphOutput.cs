@@ -7,6 +7,8 @@ using UnityEditor.VFX;
 using UnityEngine.Rendering;
 using System.Reflection;
 
+using UnityObject = UnityEngine.Object;
+
 namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 {
 
@@ -34,12 +36,16 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
             foreach( var vfxPath in guids.Select(t => AssetDatabase.GUIDToAssetPath(t)))
             {
-                VFXGraph graph = (VFXGraph)s_GetOrCreateGraph.GetValue(s_GetResourceAtPath.Invoke(null, new object[] { vfxPath }), new object[] { });
-
-                if( graph != null)
+                UnityObject resource = (UnityObject)s_GetResourceAtPath.Invoke(null, new object[] { vfxPath });
+                if (resource != null)
                 {
-                    if (graph.children.OfType<VFXHDRPShaderGraphOutput>().Any(t => modifiedShaderGraphs.Contains(t.shaderGraph)))
-                        assetsToReimport.Add(graph);
+                    VFXGraph graph = (VFXGraph)s_GetOrCreateGraph.GetValue(resource, new object[] { });
+
+                    if (graph != null)
+                    {
+                        if (graph.children.OfType<VFXHDRPShaderGraphOutput>().Any(t => modifiedShaderGraphs.Contains(t.shaderGraph)))
+                            assetsToReimport.Add(graph);
+                    }
                 }
             }
 
