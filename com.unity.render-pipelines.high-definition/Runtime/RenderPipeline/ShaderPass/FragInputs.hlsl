@@ -28,6 +28,10 @@ struct FragInputs
 
     // For two sided lighting
     bool isFrontFace;
+#ifdef UNITY_VFX_ACTIVE
+    ParticleMeshToPS vparticle;
+    uint particleID;
+#endif
 };
 
 void GetVaryingsDataDebug(uint paramId, FragInputs input, inout float3 result, inout bool needLinearToSRGB)

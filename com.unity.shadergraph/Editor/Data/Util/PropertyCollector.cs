@@ -62,7 +62,7 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        public List<TextureInfo> GetConfiguredTexutres()
+        public List<TextureInfo> GetConfiguredTextures()
         {
             var result = new List<TextureInfo>();
 

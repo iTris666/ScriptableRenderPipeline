@@ -6,11 +6,29 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.VFX;
 
-using Object = UnityEngine.Object;
 using System.Text.RegularExpressions;
 
 namespace UnityEditor.VFX
 {
+    interface ISpecificGenerationOutput
+    {
+        StringBuilder GenerateShader(ref VFXInfos infos);
+    }
+    struct VFXInfos
+    {
+        public string vertexFunctions;
+        public string vertexShaderContent;
+        public string shaderName;
+        public string parameters;
+        public List<string> attributes;
+        public List<VFXValueType> attributeTypes;
+        public string loadAttributes;
+        public VFXTaskType renderingType;
+
+        public List<string> modifiedByOutputAttributes;
+    }
+
+
     static class VFXCodeGenerator
     {
         private static string GetIndent(string src, int index)
@@ -28,11 +46,16 @@ namespace UnityEditor.VFX
         //This function insure to keep padding while replacing a specific string
         private static void ReplaceMultiline(StringBuilder target, string targetQuery, StringBuilder value)
         {
+            ReplaceMultiline(target, targetQuery, value.ToString());
+        }
+            //This function insure to keep padding while replacing a specific string
+            private static void ReplaceMultiline(StringBuilder target, string targetQuery, string value)
+        {
             string[] delim = { System.Environment.NewLine, "\n" };
-            var valueLines = value.ToString().Split(delim, System.StringSplitOptions.None);
+            var valueLines = value.Split(delim, System.StringSplitOptions.None);
             if (valueLines.Length <= 1)
             {
-                target.Replace(targetQuery, value.ToString());
+                target.Replace(targetQuery, value);
             }
             else
             {
@@ -352,7 +375,6 @@ namespace UnityEditor.VFX
 
         static private StringBuilder Build(VFXContext context, string templatePath, VFXCompilationMode compilationMode, VFXContextCompiledData contextData)
         {
-            var stringBuilder = GetFlattenedTemplateContent(templatePath, new List<string>(), context.additionalDefines);
 
             var globalDeclaration = new VFXShaderWriter();
             globalDeclaration.WriteCBuffer(contextData.uniformMapper, "parameters");
@@ -416,6 +438,27 @@ namespace UnityEditor.VFX
             var uniqueIncludes = new HashSet<string>(includes);
             foreach (var includePath in uniqueIncludes)
                 perPassIncludeContent.WriteLine(string.Format("#include \"{0}\"", includePath));
+
+            if ( context is ISpecificGenerationOutput)
+            {
+                VFXInfos infos = new VFXInfos();
+                infos.vertexFunctions = blockFunction.ToString();
+                infos.vertexShaderContent = blockCallFunction.ToString();
+                infos.attributes = context.GetData().GetAttributes().Select(t=>t.attrib.name).ToList();
+                infos.attributeTypes = context.GetData().GetAttributes().Select(t => t.attrib.type).ToList();
+                infos.loadAttributes = GenerateLoadAttribute(".*", context).ToString();
+                infos.modifiedByOutputAttributes = context.children.Where(t=>t.enabled).SelectMany(t=>t.attributes).Where(t=>(t.mode & VFXAttributeMode.Write) != 0).Select(t=>t.attrib.name).Distinct().ToList();
+                infos.renderingType = context.taskType;
+
+                var parameters = new VFXShaderWriter();
+                parameters.WriteCBuffer(contextData.uniformMapper, "parameters");
+                parameters.WriteTexture(contextData.uniformMapper);
+
+                infos.parameters = parameters.ToString();
+
+                return (context as ISpecificGenerationOutput).GenerateShader(ref infos);
+            } 
+            var stringBuilder = GetFlattenedTemplateContent(templatePath, new List<string>(), context.additionalDefines);
 
             ReplaceMultiline(stringBuilder, "${VFXGlobalInclude}", globalIncludeContent.builder);
             ReplaceMultiline(stringBuilder, "${VFXGlobalDeclaration}", globalDeclaration.builder);

@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace UnityEditor.VFX
 {
-    abstract class VFXAbstractRenderedOutput : VFXContext
+    abstract class VFXAbstractRenderedOutput : VFXAbstractSortedOutput
     {
         public enum BlendMode
         {
@@ -21,9 +21,9 @@ namespace UnityEditor.VFX
         [VFXSetting, Header("Render States")]
         public BlendMode blendMode = BlendMode.Alpha;
 
-        public bool isBlendModeOpaque { get { return blendMode == BlendMode.Opaque || blendMode == BlendMode.Masked; } }
+        public override bool isBlendModeOpaque { get { return blendMode == BlendMode.Opaque || blendMode == BlendMode.Masked; } }
 
-        protected VFXAbstractRenderedOutput(VFXDataType dataType) : base(VFXContextType.Output, dataType, VFXDataType.None) { }
+        protected VFXAbstractRenderedOutput(VFXDataType dataType):base(dataType) { }
 
         public VFXSRPSubOutput subOutput => m_CurrentSubOutput;
         private VFXSRPSubOutput CreateDefaultSubOutput()
