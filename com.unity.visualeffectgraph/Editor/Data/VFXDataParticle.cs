@@ -409,7 +409,7 @@ namespace UnityEditor.VFX
 
         public bool NeedsIndirectBuffer()
         {
-            return owners.OfType<VFXAbstractSortedOutput>().Any(o => o.HasIndirectDraw());
+            return owners.OfType<VFXAbstractParticleOutput>().Any(o => o.HasIndirectDraw());
         }
 
         public bool NeedsSort()

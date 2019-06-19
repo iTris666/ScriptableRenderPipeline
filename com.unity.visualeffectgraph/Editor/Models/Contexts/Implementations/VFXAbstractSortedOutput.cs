@@ -25,15 +25,16 @@ namespace UnityEditor.VFX
         protected int sortPriority = 0;
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField]
-        protected SortMode sort = SortMode.Auto;
-
-        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField]
         protected bool castShadows = false;
 
         // IVFXSubRenderer interface
         public virtual bool hasShadowCasting { get { return castShadows; } }
 
-        public virtual bool HasSorting()        { return sort == SortMode.On; }
+        public virtual bool HasSorting()        { return false; }
+
+        public virtual bool HasIndirectDraw() { return false; }
+
+        public virtual bool NeedsDeadListCount() { return false; }
         int IVFXSubRenderer.sortPriority
         {
             get {
