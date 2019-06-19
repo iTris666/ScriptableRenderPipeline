@@ -61,13 +61,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
     }
 
 
-    [VFXInfo]
-    class VFXHDRPShaderGraphOutput : VFXAbstractSortedOutput, ISpecificGenerationOutput
+    abstract class VFXHDRPShaderGraphOutput : VFXAbstractSortedOutput, ISpecificGenerationOutput
     {
-        VFXHDRPShaderGraphOutput() :base(VFXDataType.Particle) { }
-        public override string name { get { return "Shader Graph Mesh Output"; } }
+        protected VFXHDRPShaderGraphOutput() :base(VFXDataType.Particle) { }
         public override string codeGeneratorTemplate { get { return ""; } }
-        public override VFXTaskType taskType { get { return VFXTaskType.ParticleMeshOutput; } }
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InGraph), SerializeField]
         protected Shader m_ShaderGraph = null;
@@ -101,15 +98,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 yield return new VFXAttributeInfo(VFXAttribute.ScaleZ, VFXAttributeMode.Read);
             }
         }
-
-        public class InputProperties
-        {
-            [Tooltip("Mesh to be used for particle rendering.")]
-            public Mesh mesh = VFXResources.defaultResources.mesh;
-            [Tooltip("Define a bitmask to control which submeshes are rendered.")]
-            public uint subMeshMask = 0xffffffff;
-        }
-
 
         static readonly Dictionary<string, Type> s_shaderTypeToType = new Dictionary<string, Type>
         {
@@ -206,8 +194,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             switch (target)
             {
                 case VFXDeviceTarget.CPU:
-                    mapper.AddExpression(inputSlots.First(s => s.name == "mesh").GetExpression(), "mesh", -1);
-                    mapper.AddExpression(inputSlots.First(s => s.name == "subMeshMask").GetExpression(), "subMeshMask", -1);
 
 
                     break;
@@ -243,6 +229,73 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             }
 
             return mapper;
+        }
+    }
+    [VFXInfo]
+    class VFXHDRPMeshShaderGraphOutput : VFXHDRPShaderGraphOutput
+    {
+
+        public class InputProperties
+        {
+            [Tooltip("Mesh to be used for particle rendering.")]
+            public Mesh mesh = VFXResources.defaultResources.mesh;
+            [Tooltip("Define a bitmask to control which submeshes are rendered.")]
+            public uint subMeshMask = 0xffffffff;
+        }
+
+        public override VFXTaskType taskType { get { return VFXTaskType.ParticleMeshOutput; } }
+
+        public override string name { get { return "Shader Graph Mesh Output"; } }
+
+        public override VFXExpressionMapper GetExpressionMapper(VFXDeviceTarget target)
+        {
+            var mapper = base.GetExpressionMapper(target);
+
+            switch (target)
+            {
+                case VFXDeviceTarget.CPU:
+                    mapper.AddExpression(inputSlots.First(s => s.name == "mesh").GetExpression(), "mesh", -1);
+                    mapper.AddExpression(inputSlots.First(s => s.name == "subMeshMask").GetExpression(), "subMeshMask", -1);
+                    break;
+            }
+
+            return mapper;
+        }
+    }
+
+    [VFXInfo]
+    class VFXHDRPPlanarShaderGraphOutput : VFXHDRPShaderGraphOutput
+    {
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField]
+        protected VFXPrimitiveType primitiveType = VFXPrimitiveType.Quad;
+
+        protected override IEnumerable<VFXPropertyWithValue> inputProperties
+        {
+            get
+            {
+                var properties = base.inputProperties;
+                if (primitiveType == VFXPrimitiveType.Octagon)
+                    properties = properties.Concat(PropertiesFromType(typeof(VFXPlanarPrimitiveHelper.OctagonInputProperties)));
+                return properties;
+            }
+        }
+
+        protected override IEnumerable<VFXNamedExpression> CollectGPUExpressions(IEnumerable<VFXNamedExpression> slotExpressions)
+        {
+            foreach (var exp in base.CollectGPUExpressions(slotExpressions))
+                yield return exp;
+
+            if (primitiveType == VFXPrimitiveType.Octagon)
+                yield return slotExpressions.First(o => o.name == "cropFactor");
+        }
+
+        public override string name { get { return primitiveType.ToString() + " Shader Graph Output"; } }
+        public override VFXTaskType taskType
+        {
+            get
+            {
+                return VFXPlanarPrimitiveHelper.GetTaskType(primitiveType);
+            }
         }
     }
 }

@@ -23,6 +23,7 @@ namespace UnityEditor.VFX
         public List<string> attributes;
         public List<VFXValueType> attributeTypes;
         public string loadAttributes;
+        public VFXTaskType renderingType;
 
         public List<string> modifiedByOutputAttributes;
     }
@@ -447,6 +448,7 @@ namespace UnityEditor.VFX
                 infos.attributeTypes = context.GetData().GetAttributes().Select(t => t.attrib.type).ToList();
                 infos.loadAttributes = GenerateLoadAttribute(".*", context).ToString();
                 infos.modifiedByOutputAttributes = context.children.Where(t=>t.enabled).SelectMany(t=>t.attributes).Where(t=>(t.mode & VFXAttributeMode.Write) != 0).Select(t=>t.attrib.name).Distinct().ToList();
+                infos.renderingType = context.taskType;
 
                 var parameters = new VFXShaderWriter();
                 parameters.WriteCBuffer(contextData.uniformMapper, "parameters");

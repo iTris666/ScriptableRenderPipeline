@@ -11,6 +11,8 @@ using UnityEditor.VFX;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering.HDPipeline;
 
+using UnlitMasterNode = UnityEditor.ShaderGraph.UnlitMasterNode;
+
 namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 {
     public static class VFXSGHDRPShaderGenerator
@@ -56,7 +58,17 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 public readonly List<int> activeSlots;
             }
 
-            internal readonly static PassInfo[] litPassInfos = new PassInfo[]
+            internal readonly static PassInfo[] unlitPassInfo = new PassInfo[]
+            {
+                new PassInfo("ShadowCaster",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("SceneSelectionPass",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("DepthForwardOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("MotionVectors",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("ForwardOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("META",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+            };
+
+            internal readonly static PassInfo[] HDlitPassInfos = new PassInfo[]
                 {
                 //GBuffer
                 new PassInfo("GBuffer",new FunctionInfo(HDLitSubShader.passGBuffer.PixelShaderSlots),new FunctionInfo(HDLitSubShader.passGBuffer.VertexShaderSlots)),
@@ -73,7 +85,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 new PassInfo("TransparentDepthPostpass",new FunctionInfo(HDLitSubShader.passTransparentDepthPostpass.PixelShaderSlots),new FunctionInfo(HDLitSubShader.passTransparentDepthPostpass.VertexShaderSlots)),
                 };
 
-            internal readonly static PassInfo[] fabricPassInfos = new PassInfo[]
+            internal readonly static PassInfo[] HDfabricPassInfos = new PassInfo[]
                 {
                 new PassInfo("ShadowCaster",new FunctionInfo(FabricSubShader.passShadowCaster.PixelShaderSlots),new FunctionInfo(FabricSubShader.passShadowCaster.VertexShaderSlots)),
                 new PassInfo("DepthForwardOnly",new FunctionInfo(FabricSubShader.passDepthForwardOnly.PixelShaderSlots),new FunctionInfo(FabricSubShader.passDepthForwardOnly.VertexShaderSlots)),
@@ -83,7 +95,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 new PassInfo("ForwardOnly",new FunctionInfo(FabricSubShader.passForwardOnly.PixelShaderSlots),new FunctionInfo(FabricSubShader.passForwardOnly.VertexShaderSlots)),
                 };
 
-            internal readonly static PassInfo[] unlitPassInfos = new PassInfo[]
+            internal readonly static PassInfo[] HDunlitPassInfos = new PassInfo[]
                 {
                 new PassInfo("ShadowCaster",new FunctionInfo(HDUnlitSubShader.passShadowCaster.PixelShaderSlots),new FunctionInfo(HDUnlitSubShader.passShadowCaster.VertexShaderSlots)),
                 new PassInfo("DepthForwardOnly",new FunctionInfo(HDUnlitSubShader.passDepthForwardOnly.PixelShaderSlots),new FunctionInfo(HDUnlitSubShader.passDepthForwardOnly.VertexShaderSlots)),
@@ -94,7 +106,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 new PassInfo("ForwardOnly",new FunctionInfo(HDUnlitSubShader.passForwardOnly.PixelShaderSlots),new FunctionInfo(HDUnlitSubShader.passForwardOnly.VertexShaderSlots)),
                 };
 
-            internal readonly static PassInfo[] hairPassInfos = new PassInfo[]
+            internal readonly static PassInfo[] HDhairPassInfos = new PassInfo[]
                 {
                 new PassInfo("ShadowCaster",new FunctionInfo(HairSubShader.passShadowCaster.PixelShaderSlots),new FunctionInfo(HairSubShader.passShadowCaster.VertexShaderSlots)),
                 new PassInfo("SceneSelectionPass",new FunctionInfo(HairSubShader.passSceneSelection.PixelShaderSlots),new FunctionInfo(HairSubShader.passSceneSelection.VertexShaderSlots)),
@@ -310,10 +322,11 @@ struct ParticleMeshToPS
 
         static readonly Dictionary<System.Type, MasterNodeInfo> s_MasterNodeInfos = new Dictionary<Type, MasterNodeInfo>
         {
-            {typeof(HDLitMasterNode), new MasterNodeInfo(Graph.litPassInfos,PrepareHDLitMasterNode) },
-            {typeof(HDUnlitMasterNode), new MasterNodeInfo(Graph.unlitPassInfos,PrepareHDUnlitMasterNode) },
-            {typeof(FabricMasterNode), new MasterNodeInfo(Graph.fabricPassInfos,PrepareFabricMasterNode) },
-            {typeof(HairMasterNode), new MasterNodeInfo(Graph.hairPassInfos,PrepareHairMasterNode) },
+            {typeof(HDLitMasterNode), new MasterNodeInfo(Graph.HDlitPassInfos,PrepareHDLitMasterNode) },
+            {typeof(HDUnlitMasterNode), new MasterNodeInfo(Graph.HDunlitPassInfos,PrepareHDUnlitMasterNode) },
+            {typeof(FabricMasterNode), new MasterNodeInfo(Graph.HDfabricPassInfos,PrepareFabricMasterNode) },
+            {typeof(HairMasterNode), new MasterNodeInfo(Graph.HDhairPassInfos,PrepareHairMasterNode) },
+            {typeof(UnlitMasterNode), new MasterNodeInfo(Graph.unlitPassInfo,null) },
         };
 
 
@@ -359,7 +372,8 @@ struct ParticleMeshToPS
 
             var defines = new Dictionary<string, int>();
 
-            masterNodeInfo.prepare(graph, guiVariables, defines);
+            if(masterNodeInfo.prepare != null)
+                masterNodeInfo.prepare(graph, guiVariables, defines);
 
             int cptLine = 0;
             document.InsertShaderLine(cptLine++, "#include \"Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXDefines.hlsl\"");
@@ -905,13 +919,7 @@ struct ParticleMeshToPS
             functionRegistry.builder.currentNode = null;
 
             sb.Append(sg.ToString());
-
-            shader.AppendLine(@"
-
-PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
-{
-    uint index = inputMesh.particleID;
-".Replace("\n", "\n"));
+            shader.Append(s_GenerateVertex[vfxInfos.renderingType](vfxInfos));
             shader.Append("    " + vfxInfos.loadAttributes.Replace("\n", "\n    "));
 
             shader.AppendLine(@"
@@ -930,8 +938,6 @@ PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
 
             shader.AppendLine(@"
     float4x4 elementToVFX = GetElementToVFXMatrix(axisX,axisY,axisZ,float3(angleX,angleY,angleZ),float3(pivotX,pivotY,pivotZ),size3,position);
-
-    float3 particlePos;
     float3 objectPos = inputMesh.positionOS;
 ");
 
@@ -949,7 +955,7 @@ PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
             }
 
             // override the positionOS with the particle position and call the standard Vert function
-            shader.Append(@"    particlePos = mul(elementToVFX,float4(objectPos,1)).xyz;
+            shader.Append(@"float3 particlePos = mul(elementToVFX,float4(objectPos,1)).xyz;
     inputMesh.positionOS = particlePos;
     PackedVaryingsType result = Vert(inputMesh);
 ");
@@ -968,6 +974,101 @@ PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
 }
 ");
             shader.AppendLine("#pragma vertex ParticleVert");
+        }
+
+        delegate string GenerateVertexPartDelegate(VFXInfos vfxInfos);
+
+        static readonly Dictionary<VFXTaskType, GenerateVertexPartDelegate> s_GenerateVertex = new Dictionary<VFXTaskType, GenerateVertexPartDelegate>
+        {
+            { VFXTaskType.ParticleMeshOutput,GenerateVertexPartMesh },
+            { VFXTaskType.ParticleTriangleOutput,GenerateVertexPartTri },
+            { VFXTaskType.ParticleQuadOutput,GenerateVertexPartQuad },
+            { VFXTaskType.ParticleOctagonOutput,GenerateVertexPartOct },
+        };
+
+        private static string GenerateVertexPartMesh(VFXInfos vfxInfos)
+        {
+            return @"
+
+PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
+{
+    uint index = inputMesh.particleID;
+";
+        }
+
+        private static string GenerateVertexPartQuad(VFXInfos vfxInfos)
+        {
+            return @"
+
+PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceID)
+{
+	uint particleID = (id >> 2) + instID * 2048;
+    uint index = particleID;
+    AttributesMesh inputMesh = (AttributesMesh)0;
+    float2 uv;
+    uv.x = float(id & 1);
+	uv.y = float((id & 2) >> 1);
+#if ATTRIBUTES_NEED_TEXCOORD0
+	inputMesh.uv0 = uv;
+#endif
+    inputMesh.positionOS = float3(uv - 0.5f,0);
+    inputMesh.particleID = particleID;
+";
+        }
+
+        private static string GenerateVertexPartTri(VFXInfos vfxInfos)
+        {
+            return @"
+
+PackedVaryingsType ParticleVert(uint id : SV_VertexID)
+{
+	uint particleID = id / 3;
+    uint index = particleID;
+    AttributesMesh inputMesh = (AttributesMesh)0;
+	const float2 kOffsets[] = {
+		float2(-0.5f, 	-0.288675129413604736328125f),
+		float2(0.0f, 	0.57735025882720947265625f),
+		float2(0.5f,	-0.288675129413604736328125f),
+	};
+	
+	const float kUVScale = 0.866025388240814208984375f;
+
+    inputMesh.positionOS = float3(kOffsets[id % 3],0);
+#if ATTRIBUTES_NEED_TEXCOORD0
+	inputMesh.uv0 = (inputMesh.positionOS.xy * kUVScale) + 0.5f;
+#endif
+    inputMesh.particleID = particleID;
+";
+        }
+
+        private static string GenerateVertexPartOct(VFXInfos vfxInfos)
+        {
+            return @"
+
+PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceID)
+{
+	uint particleID = (id >> 3) + instID * 1024;
+    uint index = particleID;
+    AttributesMesh inputMesh = (AttributesMesh)0;
+	const float2 kUvs[8] = 
+	{
+		float2(-0.5f,	0.0f),
+		float2(-0.5f,	0.5f),
+		float2(0.0f,	0.5f),
+		float2(0.5f,	0.5f),
+		float2(0.5f,	0.0f),
+		float2(0.5f,	-0.5f),
+		float2(0.0f,	-0.5f),
+		float2(-0.5f,	-0.5f),
+	};
+	
+	float cf = id & 1 ? 1.0f - cropFactor : 1.0f;
+    inputMesh.positionOS =  float3(kUvs[id & 7]  * cf,0);
+#if ATTRIBUTES_NEED_TEXCOORD0
+	inputMesh.uv0 = inputMesh.positionOS.xy + 0.5f;
+#endif
+    inputMesh.particleID = particleID;
+";
         }
     }
 }
