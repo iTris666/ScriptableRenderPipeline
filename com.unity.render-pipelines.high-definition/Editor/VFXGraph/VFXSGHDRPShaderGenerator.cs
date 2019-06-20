@@ -1008,8 +1008,8 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceI
     float2 uv;
     uv.x = float(id & 1);
 	uv.y = float((id & 2) >> 1);
-#if ATTRIBUTES_NEED_TEXCOORD0
-	inputMesh.uv0 = uv;
+#ifdef ATTRIBUTES_NEED_TEXCOORD0
+	inputMesh.uv0.xy = uv;
 #endif
     inputMesh.positionOS = float3(uv - 0.5f,0);
     inputMesh.particleID = particleID;
@@ -1034,8 +1034,8 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID)
 	const float kUVScale = 0.866025388240814208984375f;
 
     inputMesh.positionOS = float3(kOffsets[id % 3],0);
-#if ATTRIBUTES_NEED_TEXCOORD0
-	inputMesh.uv0 = (inputMesh.positionOS.xy * kUVScale) + 0.5f;
+#ifdef ATTRIBUTES_NEED_TEXCOORD0
+	inputMesh.uv0.xy = (inputMesh.positionOS.xy * kUVScale) + 0.5f;
 #endif
     inputMesh.particleID = particleID;
 ";
@@ -1064,8 +1064,8 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceI
 	
 	float cf = id & 1 ? 1.0f - cropFactor : 1.0f;
     inputMesh.positionOS =  float3(kUvs[id & 7]  * cf,0);
-#if ATTRIBUTES_NEED_TEXCOORD0
-	inputMesh.uv0 = inputMesh.positionOS.xy + 0.5f;
+#ifdef ATTRIBUTES_NEED_TEXCOORD0
+	inputMesh.uv0.xy = inputMesh.positionOS.xy + 0.5f;
 #endif
     inputMesh.particleID = particleID;
 ";

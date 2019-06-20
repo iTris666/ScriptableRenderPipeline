@@ -289,7 +289,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 yield return slotExpressions.First(o => o.name == "cropFactor");
         }
 
-        public override string name { get { return primitiveType.ToString() + " Shader Graph Output"; } }
+        public override string name { get { return "Shader Graph " + primitiveType.ToString() + " Output"; } }
         public override VFXTaskType taskType
         {
             get
