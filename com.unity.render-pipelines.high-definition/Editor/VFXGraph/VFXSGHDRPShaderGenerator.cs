@@ -14,6 +14,58 @@ using Graph = UnityEditor.VFX.SG.VFXSGShaderGenerator.Graph;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
+    public class HDRPPipelineInfo : VFXSGShaderGenerator.PipelineInfo
+    {
+        static Dictionary<string, string> guiVariables = new Dictionary<string, string>()
+            {
+                {"_StencilRef","2" },
+                {"_StencilRefDepth","0" },
+                {"_StencilRefDistortionVec","64" },
+                {"_StencilRefGBuffer", "2"},
+                {"_StencilRefMV","128" },
+                {"_StencilWriteMask","3" },
+                {"_StencilWriteMaskDepth","48" },
+                {"_StencilMaskDistortionVec","64" },
+                {"_StencilWriteMaskGBuffer", "51"},
+                {"_StencilWriteMaskMV","176" },
+
+                {"_CullMode","Back" },
+                {"_CullModeForward","Back" },
+                {"_SrcBlend","One" },
+                {"_DstBlend","Zero" },
+                {"_AlphaSrcBlend","One" },
+                {"_AlphaDstBlend","Zero" },
+                {"_ZWrite","On" },
+                {"_ColorMaskTransparentVel","RGBA" },
+                {"_ZTestDepthEqualForOpaque","Equal" },
+                {"_ZTestGBuffer","LEqual"},
+                {"_DistortionSrcBlend","One" },
+                {"_DistortionDstBlend","Zero" },
+                {"_DistortionBlurBlendOp","Add" },
+                {"_ZTestModeDistortion","Always" },
+                {"_DistortionBlurSrcBlend","One" },
+                {"_DistortionBlurDstBlend","Zero" },
+            };
+        public override Dictionary<string, string> GetDefaultShaderVariables()
+        {
+            return guiVariables;
+        }
+
+        public override IEnumerable<string> GetSpecificIncludes()
+        {
+            return new string[] { "#include \"Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXDefines.hlsl\"" };
+        }
+
+        public override IEnumerable<string> GetPerPassSpecificIncludes()
+        {
+            return new string[] { @"#define VFX_VARYING_PS_INPUTS VaryingsMeshToDS",
+                                        @"#define VFX_VARYING_POSCS positionRWS",
+                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""",
+                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc"""
+                };
+        }
+    }
+
     [InitializeOnLoad]
     public static class VFXSGHDRPShaderGenerator
     {
@@ -74,6 +126,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             VFXSGShaderGenerator.RegisterMasterNode(typeof(HDUnlitMasterNode),new VFXSGShaderGenerator.MasterNodeInfo(HDunlitPassInfos, PrepareHDUnlitMasterNode));
             VFXSGShaderGenerator.RegisterMasterNode(typeof(FabricMasterNode),new VFXSGShaderGenerator.MasterNodeInfo(HDfabricPassInfos, PrepareFabricMasterNode));
             VFXSGShaderGenerator.RegisterMasterNode(typeof(HairMasterNode),new VFXSGShaderGenerator.MasterNodeInfo(HDhairPassInfos, PrepareHairMasterNode));
+            VFXSGShaderGenerator.RegisterPipeline(typeof(HDRenderPipelineAsset), new HDRPPipelineInfo());
         }
 
         private static void PrepareHDLitMasterNode(Graph graph, Dictionary<string, string> guiVariables, Dictionary<string, int> defines)

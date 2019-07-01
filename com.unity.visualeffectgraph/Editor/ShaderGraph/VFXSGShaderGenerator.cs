@@ -1,3 +1,4 @@
+#if VFX_HAS_SG
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,7 @@ using UnityEditor.Graphing;
 using UnityEngine;
 
 using UnlitMasterNode = UnityEditor.ShaderGraph.UnlitMasterNode;
+using UnityEngine.Rendering;
 
 namespace UnityEditor.VFX.SG
 {
@@ -278,6 +280,13 @@ struct ParticleMeshToPS
             s_MasterNodeInfos.Add(masterNodeType, infos);
         }
 
+        static readonly Dictionary<System.Type, PipelineInfo> s_PipelineInfos = new Dictionary<Type, PipelineInfo>();
+
+        internal static void RegisterPipeline(Type pipelineAssetType,PipelineInfo info)
+        {
+            s_PipelineInfos[pipelineAssetType] = info;
+        }
+
        public abstract class PipelineInfo
         { 
             public abstract Dictionary<string, string> GetDefaultShaderVariables();
@@ -287,71 +296,24 @@ struct ParticleMeshToPS
             public abstract IEnumerable<string> GetPerPassSpecificIncludes();
         }
 
-        public class HDRPPipelineInfo : PipelineInfo
-        {
-            static Dictionary<string, string> guiVariables = new Dictionary<string, string>()
-            {
-                {"_StencilRef","2" },
-                {"_StencilRefDepth","0" },
-                {"_StencilRefDistortionVec","64" },
-                {"_StencilRefGBuffer", "2"},
-                {"_StencilRefMV","128" },
-                {"_StencilWriteMask","3" },
-                {"_StencilWriteMaskDepth","48" },
-                {"_StencilMaskDistortionVec","64" },
-                {"_StencilWriteMaskGBuffer", "51"},
-                {"_StencilWriteMaskMV","176" },
-
-                {"_CullMode","Back" },
-                {"_CullModeForward","Back" },
-                {"_SrcBlend","One" },
-                {"_DstBlend","Zero" },
-                {"_AlphaSrcBlend","One" },
-                {"_AlphaDstBlend","Zero" },
-                {"_ZWrite","On" },
-                {"_ColorMaskTransparentVel","RGBA" },
-                {"_ZTestDepthEqualForOpaque","Equal" },
-                {"_ZTestGBuffer","LEqual"},
-                {"_DistortionSrcBlend","One" },
-                {"_DistortionDstBlend","Zero" },
-                {"_DistortionBlurBlendOp","Add" },
-                {"_ZTestModeDistortion","Always" },
-                {"_DistortionBlurSrcBlend","One" },
-                {"_DistortionBlurDstBlend","Zero" },
-            };
-            public override Dictionary<string, string> GetDefaultShaderVariables()
-            {
-                return guiVariables;
-            }
-
-            public override IEnumerable<string> GetSpecificIncludes()
-            {
-                return new string[] { "#include \"Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXDefines.hlsl\"" };
-            }
-
-            public override IEnumerable<string> GetPerPassSpecificIncludes()
-            {
-                return new string[] { @"#define VFX_VARYING_PS_INPUTS VaryingsMeshToDS",
-                                        @"#define VFX_VARYING_POSCS positionRWS",
-                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""",
-                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc"""
-                };
-            }
-        }
-
         internal static string GenerateShader(Shader shaderGraph, ref VFXInfos vfxInfos)
         {
             MasterNodeInfo masterNodeInfo;
             Graph graph = LoadShaderGraph(shaderGraph, out masterNodeInfo);
             if (graph == null) return null;
 
-
             ShaderDocument document = new ShaderDocument();
             document.Parse(graph.shaderCode);
 
             var defines = new Dictionary<string, int>();
 
-            var pipelineInfos = new HDRPPipelineInfo();
+            Type pipelineAssetType = GraphicsSettings.renderPipelineAsset?.GetType();
+            if (pipelineAssetType == null)
+                return null;
+
+            PipelineInfo pipelineInfos = null;
+            if (!s_PipelineInfos.TryGetValue(pipelineAssetType, out pipelineInfos) || pipelineInfos == null)
+                return null;
 
             var guiVariables = pipelineInfos.GetDefaultShaderVariables();
 
@@ -670,3 +632,4 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceI
         }
     }
 }
+#endif
