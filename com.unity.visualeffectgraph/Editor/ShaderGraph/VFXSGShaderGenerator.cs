@@ -72,30 +72,36 @@ namespace UnityEditor.VFX.SG
 
         public static Graph LoadShaderGraph(Shader shader)
         {
-            string shaderGraphPath = AssetDatabase.GetAssetPath(shader);
-
-            if (Path.GetExtension(shaderGraphPath).Equals(".shadergraph", StringComparison.InvariantCultureIgnoreCase))
-            {
-                MasterNodeInfo masterNodeInfo;
-                return LoadShaderGraph(shaderGraphPath, out masterNodeInfo);
-            }
-            return null;
+            MasterNodeInfo masterNodeInfo;
+            PipelineInfo pipelineInfos;
+            return LoadShaderGraph(shader, out pipelineInfos, out masterNodeInfo);
         }
 
-        static Graph LoadShaderGraph(Shader shader, out MasterNodeInfo masterNodeInfo)
+        static Graph LoadShaderGraph(Shader shader, out PipelineInfo pipelineInfos, out MasterNodeInfo masterNodeInfo)
         {
             string shaderGraphPath = AssetDatabase.GetAssetPath(shader);
 
             if (Path.GetExtension(shaderGraphPath).Equals(".shadergraph", StringComparison.InvariantCultureIgnoreCase))
             {
-                return LoadShaderGraph(shaderGraphPath, out masterNodeInfo);
+                return LoadShaderGraph(shaderGraphPath, out pipelineInfos, out masterNodeInfo);
             }
             masterNodeInfo = new MasterNodeInfo();
+            pipelineInfos = null;
             return null;
         }
 
-        static Graph LoadShaderGraph(string shaderFilePath, out MasterNodeInfo masterNodeInfo)
+        static Graph LoadShaderGraph(string shaderFilePath, out PipelineInfo pipelineInfos, out MasterNodeInfo masterNodeInfo)
         {
+            pipelineInfos = null;
+            masterNodeInfo = new MasterNodeInfo();
+
+            Type pipelineAssetType = GraphicsSettings.renderPipelineAsset?.GetType();
+            if (pipelineAssetType == null)
+                return null;
+            pipelineInfos = null;
+            if (!s_PipelineInfos.TryGetValue(pipelineAssetType, out pipelineInfos) || pipelineInfos == null)
+                return null;
+
             var textGraph = File.ReadAllText(shaderFilePath, Encoding.UTF8);
 
             Graph graph = new Graph();
@@ -107,7 +113,7 @@ namespace UnityEditor.VFX.SG
             List<PropertyCollector.TextureInfo> textureInfos;
             graph.shaderCode = (graph.graphData.outputNode as IMasterNode).GetShader(GenerationMode.ForReals, graph.graphData.outputNode.name, out textureInfos);
 
-            if (!s_MasterNodeInfos.TryGetValue(graph.graphData.outputNode.GetType(), out masterNodeInfo))
+            if (!pipelineInfos.masterNodes.TryGetValue(graph.graphData.outputNode.GetType(), out masterNodeInfo))
                 return null;
 
             graph.slots = new List<MaterialSlot>();
@@ -165,7 +171,7 @@ namespace UnityEditor.VFX.SG
             return remainingProperties;
         }
 
-        struct VaryingAttribute
+        internal struct VaryingAttribute
         {
             public string name;
             public int type;
@@ -270,16 +276,6 @@ struct ParticleMeshToPS
             public readonly PrepareMasterNodeDelegate prepare;
         }
 
-        static readonly Dictionary<System.Type, MasterNodeInfo> s_MasterNodeInfos = new Dictionary<Type, MasterNodeInfo>
-        {
-            {typeof(UnlitMasterNode), new MasterNodeInfo(Graph.unlitPassInfo,null) },
-        };
-
-        internal static void RegisterMasterNode(Type masterNodeType, MasterNodeInfo infos)
-        {
-            s_MasterNodeInfos.Add(masterNodeType, infos);
-        }
-
         static readonly Dictionary<System.Type, PipelineInfo> s_PipelineInfos = new Dictionary<Type, PipelineInfo>();
 
         internal static void RegisterPipeline(Type pipelineAssetType,PipelineInfo info)
@@ -287,19 +283,50 @@ struct ParticleMeshToPS
             s_PipelineInfos[pipelineAssetType] = info;
         }
 
-       public abstract class PipelineInfo
-        { 
-            public abstract Dictionary<string, string> GetDefaultShaderVariables();
+        internal abstract class PipelineInfo
+        {
+            internal abstract Dictionary<string, string> GetDefaultShaderVariables();
 
-            public abstract IEnumerable<string> GetSpecificIncludes();
+            internal abstract IEnumerable<string> GetSpecificIncludes();
 
-            public abstract IEnumerable<string> GetPerPassSpecificIncludes();
+            internal abstract IEnumerable<string> GetPerPassSpecificIncludes();
+
+            internal abstract bool ModifyPass(PassPart pass, ref VFXInfos vfxInfos, List<VFXSGShaderGenerator.VaryingAttribute> varyingAttributes, GraphData graphData);
+
+            internal abstract Dictionary<System.Type, MasterNodeInfo> masterNodes
+            {
+                get;
+            }
+
+            internal void ReplaceCBuffer(PassPart pass,ref VFXInfos vfxInfos)
+            {
+                //Replace CBUFFER and TEXTURE bindings by the one from the VFX
+                int cBuffer = pass.IndexOfLineMatching(@"CBUFFER_START");
+                if (cBuffer != -1)
+                {
+                    int cBufferEnd = pass.IndexOfLineMatching(@"CBUFFER_END", cBuffer);
+
+                    if (cBufferEnd != -1)
+                    {
+                        ++cBufferEnd;
+
+                        while (string.IsNullOrWhiteSpace(pass.shaderCode[cBufferEnd]) || pass.shaderCode[cBufferEnd].Contains("TEXTURE2D("))
+                        {
+                            pass.shaderCode.RemoveAt(cBufferEnd);
+                        }
+                        pass.shaderCode.RemoveRange(cBuffer, cBufferEnd - cBuffer + 1);
+                    }
+
+                    pass.InsertShaderCode(cBuffer, vfxInfos.parameters);
+                }
+            }
         }
 
         internal static string GenerateShader(Shader shaderGraph, ref VFXInfos vfxInfos)
         {
+            PipelineInfo pipelineInfos;
             MasterNodeInfo masterNodeInfo;
-            Graph graph = LoadShaderGraph(shaderGraph, out masterNodeInfo);
+            Graph graph = LoadShaderGraph(shaderGraph, out pipelineInfos, out masterNodeInfo);
             if (graph == null) return null;
 
             ShaderDocument document = new ShaderDocument();
@@ -307,13 +334,7 @@ struct ParticleMeshToPS
 
             var defines = new Dictionary<string, int>();
 
-            Type pipelineAssetType = GraphicsSettings.renderPipelineAsset?.GetType();
-            if (pipelineAssetType == null)
-                return null;
 
-            PipelineInfo pipelineInfos = null;
-            if (!s_PipelineInfos.TryGetValue(pipelineAssetType, out pipelineInfos) || pipelineInfos == null)
-                return null;
 
             var guiVariables = pipelineInfos.GetDefaultShaderVariables();
 
@@ -360,105 +381,7 @@ struct ParticleMeshToPS
             pass.InsertShaderCode(-1, sb.ToString());
             pass.RemoveShaderCodeContaining("#pragma vertex Vert");
 
-            // Pass particleID to pixel shader function : SurfaceDescriptionFunction
-            int functionIndex;
-            List<string> functionFragInputsToSurfaceDescriptionInputs = pass.ExtractFunction("SurfaceDescriptionInputs", "FragInputsToSurfaceDescriptionInputs", out functionIndex, "FragInputs", "input", "float3", "viewWS");
-
-            if(functionFragInputsToSurfaceDescriptionInputs != null)
-            {
-                for (int i = 0; i < functionFragInputsToSurfaceDescriptionInputs.Count - 2; ++i)
-                { 
-                   pass.InsertShaderLine(i + functionIndex,functionFragInputsToSurfaceDescriptionInputs[i]);
-                }
-                pass.InsertShaderLine(functionIndex + functionFragInputsToSurfaceDescriptionInputs.Count - 2, "                output.particleID = input.particleID;");
-                for (int i = functionFragInputsToSurfaceDescriptionInputs.Count - 2; i < functionFragInputsToSurfaceDescriptionInputs.Count; ++i)
-                {
-                    pass.InsertShaderLine(i + functionIndex + 1, functionFragInputsToSurfaceDescriptionInputs[i]);
-                }
-            }
-
-            //Replace CBUFFER and TEXTURE bindings by the one from the VFX
-            int cBuffer = pass.IndexOfLineMatching(@"CBUFFER_START");
-            if( cBuffer != -1)
-            {
-                int cBufferEnd = pass.IndexOfLineMatching(@"CBUFFER_END", cBuffer);
-
-                if (cBufferEnd != -1)
-                {
-                    ++cBufferEnd;
-
-                    while (string.IsNullOrWhiteSpace(pass.shaderCode[cBufferEnd]) || pass.shaderCode[cBufferEnd].Contains("TEXTURE2D("))
-                    {
-                        pass.shaderCode.RemoveAt(cBufferEnd);
-                    }
-                    pass.shaderCode.RemoveRange(cBuffer, cBufferEnd - cBuffer + 1);
-                }
-
-                pass.InsertShaderCode(cBuffer, vfxInfos.parameters);
-            }
-            // pass VParticle varyings as additionnal parameter to SurfaceDescriptionFunction
-            int surfaceDescCall = pass.IndexOfLineMatching(@"SurfaceDescription\s+surfaceDescription\s*=\s*SurfaceDescriptionFunction\s*\(\s*surfaceDescriptionInputs\s*\)\;");
-            if(surfaceDescCall != -1)
-            {
-                pass.shaderCode[surfaceDescCall] = @"SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(surfaceDescriptionInputs,fragInputs.vparticle);";
-            }
-
-            // Inject attribute load code to SurfaceDescriptionFunction
-            List<string> functionSurfaceDefinition = pass.ExtractFunction("SurfaceDescription", "SurfaceDescriptionFunction", out functionIndex, "SurfaceDescriptionInputs", "IN");
-
-            if(functionSurfaceDefinition != null)
-            {
-                pass.InsertShaderLine(functionIndex - 1, "ByteAddressBuffer attributeBuffer;");
-
-                functionSurfaceDefinition[0] = "SurfaceDescription SurfaceDescriptionFunction(SurfaceDescriptionInputs IN,ParticleMeshToPS vParticle)";
-
-                for (int i = 0; i < 2; ++i)
-                {
-                    pass.InsertShaderLine(i + functionIndex, functionSurfaceDefinition[i]);
-                }
-                int cptLine = 2;
-                //Load attributes from the ByteAddressBuffer
-                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    uint index = IN.particleID;");
-                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    " + vfxInfos.loadAttributes.Replace("\n", "\n                                    "));
-
-                // override attribute load with value from varyings in case of attriibute values modified in output context
-                foreach (var varyingAttribute in varyingAttributes)
-                {
-                    pass.InsertShaderLine((cptLine++) + functionIndex, string.Format("{0} = vParticle.{0};", varyingAttribute.name));
-                }
-
-                // define variable for each value that is a vfx attribute
-                PropertyCollector shaderProperties = new PropertyCollector();
-                graph.graphData.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
-                foreach (var prop in shaderProperties.properties)
-                {
-                    string matchingAttribute = vfxInfos.attributes.FirstOrDefault(t => prop.displayName.Equals(t, StringComparison.InvariantCultureIgnoreCase));
-                    if (matchingAttribute != null)
-                    {
-                        if (matchingAttribute == "color")
-                            pass.InsertShaderLine((cptLine++) + functionIndex, "    " + prop.GetPropertyDeclarationString("") + " = float4(color,1);");
-                        else
-                            pass.InsertShaderLine((cptLine++) + functionIndex, "    " + prop.GetPropertyDeclarationString("") + " = " + matchingAttribute + ";");
-                    }
-                }
-                pass.InsertShaderLine((cptLine++) + functionIndex, @"
-
-    if( !alive) discard;
-    ");
-
-                for (int i = 2; i < functionSurfaceDefinition.Count - 2; ++i)
-                {
-                    pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
-                }
-                if ( vfxInfos.attributes.Contains("alpha") )
-                    pass.InsertShaderLine((cptLine++) + functionIndex, "                        surface.Alpha *= alpha;");
-
-                for (int i = functionSurfaceDefinition.Count - 2; i < functionSurfaceDefinition.Count; ++i)
-                {
-                    pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
-                }
-            }
-
+            pipelineInfos.ModifyPass(pass, ref vfxInfos, varyingAttributes, graph.graphData);
         }
 
         private static void GenerateParticleVert(Graph graph,VFXInfos vfxInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)

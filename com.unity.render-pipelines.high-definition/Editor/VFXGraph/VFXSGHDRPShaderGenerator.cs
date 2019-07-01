@@ -1,5 +1,6 @@
-
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using UnityEditor.ShaderGraph;
 using UnityEditor.VFX.SG;
@@ -10,64 +11,12 @@ using UnlitMasterNode = UnityEditor.ShaderGraph.UnlitMasterNode;
 using PassInfo = UnityEditor.VFX.SG.VFXSGShaderGenerator.Graph.PassInfo;
 using FunctionInfo = UnityEditor.VFX.SG.VFXSGShaderGenerator.Graph.FunctionInfo;
 using Graph = UnityEditor.VFX.SG.VFXSGShaderGenerator.Graph;
-
+using MasterNodeInfo  = UnityEditor.VFX.SG.VFXSGShaderGenerator.MasterNodeInfo;
+using UnityEditor.VFX;
 
 namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
-    public class HDRPPipelineInfo : VFXSGShaderGenerator.PipelineInfo
-    {
-        static Dictionary<string, string> guiVariables = new Dictionary<string, string>()
-            {
-                {"_StencilRef","2" },
-                {"_StencilRefDepth","0" },
-                {"_StencilRefDistortionVec","64" },
-                {"_StencilRefGBuffer", "2"},
-                {"_StencilRefMV","128" },
-                {"_StencilWriteMask","3" },
-                {"_StencilWriteMaskDepth","48" },
-                {"_StencilMaskDistortionVec","64" },
-                {"_StencilWriteMaskGBuffer", "51"},
-                {"_StencilWriteMaskMV","176" },
-
-                {"_CullMode","Back" },
-                {"_CullModeForward","Back" },
-                {"_SrcBlend","One" },
-                {"_DstBlend","Zero" },
-                {"_AlphaSrcBlend","One" },
-                {"_AlphaDstBlend","Zero" },
-                {"_ZWrite","On" },
-                {"_ColorMaskTransparentVel","RGBA" },
-                {"_ZTestDepthEqualForOpaque","Equal" },
-                {"_ZTestGBuffer","LEqual"},
-                {"_DistortionSrcBlend","One" },
-                {"_DistortionDstBlend","Zero" },
-                {"_DistortionBlurBlendOp","Add" },
-                {"_ZTestModeDistortion","Always" },
-                {"_DistortionBlurSrcBlend","One" },
-                {"_DistortionBlurDstBlend","Zero" },
-            };
-        public override Dictionary<string, string> GetDefaultShaderVariables()
-        {
-            return guiVariables;
-        }
-
-        public override IEnumerable<string> GetSpecificIncludes()
-        {
-            return new string[] { "#include \"Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXDefines.hlsl\"" };
-        }
-
-        public override IEnumerable<string> GetPerPassSpecificIncludes()
-        {
-            return new string[] { @"#define VFX_VARYING_PS_INPUTS VaryingsMeshToDS",
-                                        @"#define VFX_VARYING_POSCS positionRWS",
-                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""",
-                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc"""
-                };
-        }
-    }
-
-    [InitializeOnLoad]
-    public static class VFXSGHDRPShaderGenerator
+    internal class HDRPPipelineInfo : VFXSGShaderGenerator.PipelineInfo
     {
         internal readonly static PassInfo[] HDlitPassInfos = new PassInfo[]
             {
@@ -120,14 +69,56 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             new PassInfo("TransparentDepthPostpass",new FunctionInfo(HairSubShader.passTransparentDepthPostpass.PixelShaderSlots),new FunctionInfo(HairSubShader.passTransparentDepthPostpass.VertexShaderSlots)),
             };
 
-        static VFXSGHDRPShaderGenerator()
+        static Dictionary<string, string> guiVariables = new Dictionary<string, string>()
+            {
+                {"_StencilRef","2" },
+                {"_StencilRefDepth","0" },
+                {"_StencilRefDistortionVec","64" },
+                {"_StencilRefGBuffer", "2"},
+                {"_StencilRefMV","128" },
+                {"_StencilWriteMask","3" },
+                {"_StencilWriteMaskDepth","48" },
+                {"_StencilMaskDistortionVec","64" },
+                {"_StencilWriteMaskGBuffer", "51"},
+                {"_StencilWriteMaskMV","176" },
+
+                {"_CullMode","Back" },
+                {"_CullModeForward","Back" },
+                {"_SrcBlend","One" },
+                {"_DstBlend","Zero" },
+                {"_AlphaSrcBlend","One" },
+                {"_AlphaDstBlend","Zero" },
+                {"_ZWrite","On" },
+                {"_ColorMaskTransparentVel","RGBA" },
+                {"_ZTestDepthEqualForOpaque","Equal" },
+                {"_ZTestGBuffer","LEqual"},
+                {"_DistortionSrcBlend","One" },
+                {"_DistortionDstBlend","Zero" },
+                {"_DistortionBlurBlendOp","Add" },
+                {"_ZTestModeDistortion","Always" },
+                {"_DistortionBlurSrcBlend","One" },
+                {"_DistortionBlurDstBlend","Zero" },
+            };
+        internal override Dictionary<string, string> GetDefaultShaderVariables()
         {
-            VFXSGShaderGenerator.RegisterMasterNode(typeof(HDLitMasterNode),new VFXSGShaderGenerator.MasterNodeInfo(HDlitPassInfos, PrepareHDLitMasterNode));
-            VFXSGShaderGenerator.RegisterMasterNode(typeof(HDUnlitMasterNode),new VFXSGShaderGenerator.MasterNodeInfo(HDunlitPassInfos, PrepareHDUnlitMasterNode));
-            VFXSGShaderGenerator.RegisterMasterNode(typeof(FabricMasterNode),new VFXSGShaderGenerator.MasterNodeInfo(HDfabricPassInfos, PrepareFabricMasterNode));
-            VFXSGShaderGenerator.RegisterMasterNode(typeof(HairMasterNode),new VFXSGShaderGenerator.MasterNodeInfo(HDhairPassInfos, PrepareHairMasterNode));
-            VFXSGShaderGenerator.RegisterPipeline(typeof(HDRenderPipelineAsset), new HDRPPipelineInfo());
+            return guiVariables;
         }
+
+        internal override IEnumerable<string> GetSpecificIncludes()
+        {
+            return new string[] { "#include \"Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXDefines.hlsl\"" };
+        }
+
+        internal override IEnumerable<string> GetPerPassSpecificIncludes()
+        {
+            return new string[] { @"#define VFX_VARYING_PS_INPUTS VaryingsMeshToDS",
+                                        @"#define VFX_VARYING_POSCS positionRWS",
+                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/HDRP/VFXCommon.cginc""",
+                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc"""
+                };
+        }
+
+        internal override Dictionary<Type, MasterNodeInfo> masterNodes => s_MasterNodeInfos;
 
         private static void PrepareHDLitMasterNode(Graph graph, Dictionary<string, string> guiVariables, Dictionary<string, int> defines)
         {
@@ -196,45 +187,45 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                     // When doing off-screen transparency accumulation, we change blend factors as described here: https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch23.html
                     switch (blendMode)
                     {
-                    // PremultipliedAlpha
-                    // color: src * src_a + dst * (1 - src_a)
-                    // src is supposed to have been multiplied by alpha in the texture on artists side.
-                    case AlphaMode.Premultiply:
-                    // Alpha
-                    // color: src * src_a + dst * (1 - src_a)
-                    // src * src_a is done in the shader as it allow to reduce precision issue when using _BLENDMODE_PRESERVE_SPECULAR_LIGHTING (See Material.hlsl)
-                    case AlphaMode.Alpha:
-                        guiVariables["_SrcBlend"] = "One";
-                        guiVariables["_DstBlend"] = "OneMinusSrcAlpha";
-                        if (masterNode.renderingPass == HDRenderQueue.RenderQueueType.LowTransparent)
-                        {
-                            guiVariables["_AlphaSrcBlend"] = "Zero";
-                            guiVariables["_AlphaDstBlend"] = "OneMinusSrcAlpha";
-                        }
-                        else
-                        {
-                            guiVariables["_AlphaSrcBlend"] = "One";
-                            guiVariables["_AlphaDstBlend"] = "OneMinusSrcAlpha";
-                        }
-                        break;
+                        // PremultipliedAlpha
+                        // color: src * src_a + dst * (1 - src_a)
+                        // src is supposed to have been multiplied by alpha in the texture on artists side.
+                        case AlphaMode.Premultiply:
+                        // Alpha
+                        // color: src * src_a + dst * (1 - src_a)
+                        // src * src_a is done in the shader as it allow to reduce precision issue when using _BLENDMODE_PRESERVE_SPECULAR_LIGHTING (See Material.hlsl)
+                        case AlphaMode.Alpha:
+                            guiVariables["_SrcBlend"] = "One";
+                            guiVariables["_DstBlend"] = "OneMinusSrcAlpha";
+                            if (masterNode.renderingPass == HDRenderQueue.RenderQueueType.LowTransparent)
+                            {
+                                guiVariables["_AlphaSrcBlend"] = "Zero";
+                                guiVariables["_AlphaDstBlend"] = "OneMinusSrcAlpha";
+                            }
+                            else
+                            {
+                                guiVariables["_AlphaSrcBlend"] = "One";
+                                guiVariables["_AlphaDstBlend"] = "OneMinusSrcAlpha";
+                            }
+                            break;
 
-                    // Additive
-                    // color: src * src_a + dst
-                    // src * src_a is done in the shader
-                    case AlphaMode.Additive:
-                        guiVariables["_SrcBlend"] = "One";
-                        guiVariables["_DstBlend"] = "One";
-                        if (masterNode.renderingPass == HDRenderQueue.RenderQueueType.LowTransparent)
-                        {
-                            guiVariables["_AlphaSrcBlend"] = "Zero";
-                            guiVariables["_AlphaDstBlend"] = "One";
-                        }
-                        else
-                        {
-                            guiVariables["_AlphaSrcBlend"] = "One";
-                            guiVariables["_AlphaDstBlend"] = "One";
-                        }
-                        break;
+                        // Additive
+                        // color: src * src_a + dst
+                        // src * src_a is done in the shader
+                        case AlphaMode.Additive:
+                            guiVariables["_SrcBlend"] = "One";
+                            guiVariables["_DstBlend"] = "One";
+                            if (masterNode.renderingPass == HDRenderQueue.RenderQueueType.LowTransparent)
+                            {
+                                guiVariables["_AlphaSrcBlend"] = "Zero";
+                                guiVariables["_AlphaDstBlend"] = "One";
+                            }
+                            else
+                            {
+                                guiVariables["_AlphaSrcBlend"] = "One";
+                                guiVariables["_AlphaDstBlend"] = "One";
+                            }
+                            break;
                     }
                 }
             }
@@ -515,6 +506,110 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                     }
                 }
             }
+        }
+
+        static readonly Dictionary<System.Type, MasterNodeInfo> s_MasterNodeInfos = new Dictionary<Type, MasterNodeInfo>
+        {
+            {typeof(HDLitMasterNode), new MasterNodeInfo(HDlitPassInfos,PrepareHDLitMasterNode) },
+            {typeof(HDUnlitMasterNode), new MasterNodeInfo(HDunlitPassInfos,PrepareHDUnlitMasterNode) },
+            {typeof(FabricMasterNode), new MasterNodeInfo(HDfabricPassInfos,PrepareFabricMasterNode) },
+            {typeof(HairMasterNode), new MasterNodeInfo(HDhairPassInfos,PrepareHairMasterNode) },
+            {typeof(UnlitMasterNode), new MasterNodeInfo(Graph.unlitPassInfo,null) },
+        };
+
+        internal override bool ModifyPass(PassPart pass, ref VFXInfos vfxInfos, List<VFXSGShaderGenerator.VaryingAttribute> varyingAttributes, GraphData graphData)
+        {
+
+            // Pass particleID to pixel shader function : SurfaceDescriptionFunction
+            int functionIndex;
+            List<string> functionFragInputsToSurfaceDescriptionInputs = pass.ExtractFunction("SurfaceDescriptionInputs", "FragInputsToSurfaceDescriptionInputs", out functionIndex, "FragInputs", "input", "float3", "viewWS");
+
+            if (functionFragInputsToSurfaceDescriptionInputs != null)
+            {
+                for (int i = 0; i < functionFragInputsToSurfaceDescriptionInputs.Count - 2; ++i)
+                {
+                    pass.InsertShaderLine(i + functionIndex, functionFragInputsToSurfaceDescriptionInputs[i]);
+                }
+                pass.InsertShaderLine(functionIndex + functionFragInputsToSurfaceDescriptionInputs.Count - 2, "                output.particleID = input.particleID;");
+                for (int i = functionFragInputsToSurfaceDescriptionInputs.Count - 2; i < functionFragInputsToSurfaceDescriptionInputs.Count; ++i)
+                {
+                    pass.InsertShaderLine(i + functionIndex + 1, functionFragInputsToSurfaceDescriptionInputs[i]);
+                }
+            }
+            ReplaceCBuffer(pass, ref vfxInfos);
+            // pass VParticle varyings as additionnal parameter to SurfaceDescriptionFunction
+            int surfaceDescCall = pass.IndexOfLineMatching(@"SurfaceDescription\s+surfaceDescription\s*=\s*SurfaceDescriptionFunction\s*\(\s*surfaceDescriptionInputs\s*\)\;");
+            if (surfaceDescCall != -1)
+            {
+                pass.shaderCode[surfaceDescCall] = @"SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(surfaceDescriptionInputs,fragInputs.vparticle);";
+            }
+
+            // Inject attribute load code to SurfaceDescriptionFunction
+            List<string> functionSurfaceDefinition = pass.ExtractFunction("SurfaceDescription", "SurfaceDescriptionFunction", out functionIndex, "SurfaceDescriptionInputs", "IN");
+
+            if (functionSurfaceDefinition != null)
+            {
+                pass.InsertShaderLine(functionIndex - 1, "ByteAddressBuffer attributeBuffer;");
+
+                functionSurfaceDefinition[0] = "SurfaceDescription SurfaceDescriptionFunction(SurfaceDescriptionInputs IN,ParticleMeshToPS vParticle)";
+
+                for (int i = 0; i < 2; ++i)
+                {
+                    pass.InsertShaderLine(i + functionIndex, functionSurfaceDefinition[i]);
+                }
+                int cptLine = 2;
+                //Load attributes from the ByteAddressBuffer
+                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    uint index = IN.particleID;");
+                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    " + vfxInfos.loadAttributes.Replace("\n", "\n                                    "));
+
+                // override attribute load with value from varyings in case of attriibute values modified in output context
+                foreach (var varyingAttribute in varyingAttributes)
+                {
+                    pass.InsertShaderLine((cptLine++) + functionIndex, string.Format("{0} = vParticle.{0};", varyingAttribute.name));
+                }
+
+                // define variable for each value that is a vfx attribute
+                PropertyCollector shaderProperties = new PropertyCollector();
+                graphData.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
+                foreach (var prop in shaderProperties.properties)
+                {
+                    string matchingAttribute = vfxInfos.attributes.FirstOrDefault(t => prop.displayName.Equals(t, StringComparison.InvariantCultureIgnoreCase));
+                    if (matchingAttribute != null)
+                    {
+                        if (matchingAttribute == "color")
+                            pass.InsertShaderLine((cptLine++) + functionIndex, "    " + prop.GetPropertyDeclarationString("") + " = float4(color,1);");
+                        else
+                            pass.InsertShaderLine((cptLine++) + functionIndex, "    " + prop.GetPropertyDeclarationString("") + " = " + matchingAttribute + ";");
+                    }
+                }
+                pass.InsertShaderLine((cptLine++) + functionIndex, @"
+
+    if( !alive) discard;
+    ");
+
+                for (int i = 2; i < functionSurfaceDefinition.Count - 2; ++i)
+                {
+                    pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
+                }
+                if (vfxInfos.attributes.Contains("alpha"))
+                    pass.InsertShaderLine((cptLine++) + functionIndex, "                        surface.Alpha *= alpha;");
+
+                for (int i = functionSurfaceDefinition.Count - 2; i < functionSurfaceDefinition.Count; ++i)
+                {
+                    pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
+                }
+            }
+
+            return true;
+        }
+}
+
+    [InitializeOnLoad]
+    public static class VFXSGHDRPShaderGenerator
+    {
+        static VFXSGHDRPShaderGenerator()
+        {
+            VFXSGShaderGenerator.RegisterPipeline(typeof(HDRenderPipelineAsset), new HDRPPipelineInfo());
         }
     }
 }
