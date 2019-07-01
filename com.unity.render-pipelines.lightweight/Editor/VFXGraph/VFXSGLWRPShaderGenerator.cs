@@ -3,14 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using UnityEngine;
+
 using UnityEditor.ShaderGraph;
 using UnityEditor.VFX;
 using UnityEditor.VFX.SG;
 
 using PassInfo = UnityEditor.VFX.SG.VFXSGShaderGenerator.Graph.PassInfo;
 using FunctionInfo = UnityEditor.VFX.SG.VFXSGShaderGenerator.Graph.FunctionInfo;
-using Graph = UnityEditor.VFX.SG.VFXSGShaderGenerator.Graph;
 using MasterNodeInfo = UnityEditor.VFX.SG.VFXSGShaderGenerator.MasterNodeInfo;
+using UnityEngine.Rendering.LWRP;
 
 namespace UnityEditor.RenderPipeline.LWpipeline
 {
@@ -136,5 +138,16 @@ namespace UnityEditor.RenderPipeline.LWpipeline
         internal override Dictionary<Type, MasterNodeInfo> masterNodes => s_MasterNodeInfos;
     }
 
+    [InitializeOnLoad]
+    public static class VFXSGLWRPShaderGenerator
+    {
+        static VFXSGLWRPShaderGenerator()
+        {
+            VFXSGShaderGenerator.RegisterPipeline(typeof(LightweightRenderPipelineAsset), new LWRPPipelineInfo());
+        }
+    }
+
 }
+
+
 #endif

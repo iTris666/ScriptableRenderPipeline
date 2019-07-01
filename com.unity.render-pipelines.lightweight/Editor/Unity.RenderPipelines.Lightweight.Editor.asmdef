@@ -6,7 +6,8 @@
         "Unity.Postprocessing.Editor",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Core.Editor",
-        "Unity.ShaderGraph.Editor"
+        "Unity.ShaderGraph.Editor",
+        "Unity.VisualEffectGraph.Editor"
     ],
     "includePlatforms": [
         "Editor"
@@ -20,7 +21,7 @@
     "versionDefines": [
         {
             "name": "com.unity.visualeffectgraph",
-            "expression": "7.0.0",
+            "expression": "6.0.0",
             "define": "LWRP_HAS_VFX"
         }
     ]

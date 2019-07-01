@@ -1,4 +1,3 @@
-#if LWRP_HAS_VFX
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -624,4 +623,3 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         }
     }
 }
-#endif
