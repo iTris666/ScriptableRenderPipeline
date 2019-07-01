@@ -1,8 +1,9 @@
+#if VFX_HAS_SG
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor.ShaderGraph;
 
-namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
+namespace UnityEditor.VFX.SG
 {
     class ShaderDocument : ShaderPart
     {
@@ -131,3 +132,4 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
     }
 }
+#endif

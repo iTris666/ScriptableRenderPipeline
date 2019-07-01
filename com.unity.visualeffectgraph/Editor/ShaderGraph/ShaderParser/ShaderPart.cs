@@ -1,3 +1,4 @@
+#if VFX_HAS_SG
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,7 +6,7 @@ using UnityEngine;
 using System.Text.RegularExpressions;
 using UnityEditor.ShaderGraph;
 
-namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
+namespace UnityEditor.VFX.SG
 {
 
     struct StencilParameters
@@ -598,3 +599,4 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
 
 }
+#endif

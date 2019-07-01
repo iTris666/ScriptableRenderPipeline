@@ -1,3 +1,4 @@
+#if VFX_HAS_SG
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,19 +7,17 @@ using System.Text;
 using UnityEditor.VFX;
 using UnityEngine.Rendering;
 using System.Reflection;
+using UnityEngine.VFX;
 
 using UnityObject = UnityEngine.Object;
 
-namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
+namespace UnityEditor.VFX.SG
 {
-
     class VFXShaderGraphPostProcessor : AssetPostprocessor
     {
 
-        static MethodInfo s_GetResourceAtPath = System.Type.GetType("UnityEditor.Experimental.VFX.VisualEffectResource, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null").GetMethod("GetResourceAtPath",System.Reflection.BindingFlags.Public| System.Reflection.BindingFlags.Static);
-        static PropertyInfo s_GetOrCreateGraph = System.Type.GetType("UnityEditor.Experimental.VFX.VisualEffectResource, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null").GetProperty("graph", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-
-
+        static MethodInfo s_GetResourceAtPath = System.Type.GetType("UnityEditor.VFX.VisualEffectResource, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null").GetMethod("GetResourceAtPath",System.Reflection.BindingFlags.Public| System.Reflection.BindingFlags.Static);
+        static PropertyInfo s_GetOrCreateGraph = System.Type.GetType("UnityEditor.VFX.VisualEffectResource, UnityEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null").GetProperty("graph", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
         static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
         {
@@ -36,6 +35,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
             foreach( var vfxPath in guids.Select(t => AssetDatabase.GUIDToAssetPath(t)))
             {
+
                 UnityObject resource = (UnityObject)s_GetResourceAtPath.Invoke(null, new object[] { vfxPath });
                 if (resource != null)
                 {
@@ -43,7 +43,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
                     if (graph != null)
                     {
-                        if (graph.children.OfType<VFXHDRPShaderGraphOutput>().Any(t => modifiedShaderGraphs.Contains(t.shaderGraph)))
+                        if (graph.children.OfType<VFXShaderGraphOutput>().Any(t => modifiedShaderGraphs.Contains(t.shaderGraph)))
                             assetsToReimport.Add(graph);
                     }
                 }
@@ -51,7 +51,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
             foreach( var graph in assetsToReimport)
             {
-                foreach (var sgOutput in graph.children.OfType<VFXHDRPShaderGraphOutput>().Where(t => modifiedShaderGraphs.Contains(t.shaderGraph)))
+                foreach (var sgOutput in graph.children.OfType<VFXShaderGraphOutput>().Where(t => modifiedShaderGraphs.Contains(t.shaderGraph)))
                     sgOutput.ResyncSlots(true);
 
                 graph.SetExpressionGraphDirty();
@@ -61,9 +61,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
     }
 
 
-    abstract class VFXHDRPShaderGraphOutput : VFXAbstractSortedOutput, ISpecificGenerationOutput
+    abstract class VFXShaderGraphOutput : VFXAbstractSortedOutput, ISpecificGenerationOutput
     {
-        protected VFXHDRPShaderGraphOutput() :base(VFXDataType.Particle) { }
+        protected VFXShaderGraphOutput() :base(VFXDataType.Particle) { }
         public override string codeGeneratorTemplate { get { return ""; } }
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InGraph), SerializeField]
@@ -115,16 +115,13 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             { "Gradient" , typeof(Gradient) },
         };
 
-        public StringBuilder GenerateShader(ref VFXInfos infos)
+        public string GenerateShader(ref VFXInfos infos)
         {
             if (shaderGraph == null)
                 return null;
+            string result = VFXSGShaderGenerator.GenerateShader(shaderGraph, ref infos);
 
-            var sb = new StringBuilder();
-            string result = VFXSGHDRPShaderGenerator.GenerateShader(shaderGraph, ref infos);
-            if( result != null)
-                sb.Append( result);
-            return sb;
+            return result;
         }
 
         protected override IEnumerable<VFXPropertyWithValue> inputProperties
@@ -132,10 +129,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             get {
                 if( shaderGraph != null)
                 {
-                    var graph = VFXSGHDRPShaderGenerator.LoadShaderGraph(shaderGraph);
+                    var graph = VFXSGShaderGenerator.LoadShaderGraph(shaderGraph);
                     if( graph != null)
                     {
-                        List<string> sgDeclarations = VFXSGHDRPShaderGenerator.GetPropertiesExcept(graph,attributes.Select(t => t.attrib.name).ToList());
+                        List<string> sgDeclarations = VFXSGShaderGenerator.GetPropertiesExcept(graph,attributes.Select(t => t.attrib.name).ToList());
 
                         foreach (var decl in sgDeclarations)
                         {
@@ -163,10 +160,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
                 yield return exp;
             if (shaderGraph != null)
             {
-                var graph = VFXSGHDRPShaderGenerator.LoadShaderGraph(shaderGraph);
+                var graph = VFXSGShaderGenerator.LoadShaderGraph(shaderGraph);
                 if (graph != null)
                 {
-                    List<string> sgDeclarations = VFXSGHDRPShaderGenerator.GetPropertiesExcept(graph, attributes.Select(t => t.attrib.name).ToList());
+                    List<string> sgDeclarations = VFXSGShaderGenerator.GetPropertiesExcept(graph, attributes.Select(t => t.attrib.name).ToList());
 
                     foreach (var decl in sgDeclarations)
                     {
@@ -198,10 +195,10 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
 
                     break;
                 default:
-                    var graph = VFXSGHDRPShaderGenerator.LoadShaderGraph(shaderGraph);
+                    var graph = VFXSGShaderGenerator.LoadShaderGraph(shaderGraph);
                     if (graph != null)
                     {
-                        Dictionary<string,Texture> textures = VFXSGHDRPShaderGenerator.GetUsedTextures(graph);
+                        Dictionary<string,Texture> textures = VFXSGShaderGenerator.GetUsedTextures(graph);
                         foreach( var tex in textures.Where(t=>t.Value != null).OrderBy(t=>t.Key))
                         {
                             var renderTex = tex.Value as RenderTexture;
@@ -231,71 +228,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
             return mapper;
         }
     }
-    [VFXInfo]
-    class VFXHDRPMeshShaderGraphOutput : VFXHDRPShaderGraphOutput
-    {
-
-        public class InputProperties
-        {
-            [Tooltip("Mesh to be used for particle rendering.")]
-            public Mesh mesh = VFXResources.defaultResources.mesh;
-            [Tooltip("Define a bitmask to control which submeshes are rendered.")]
-            public uint subMeshMask = 0xffffffff;
-        }
-
-        public override VFXTaskType taskType { get { return VFXTaskType.ParticleMeshOutput; } }
-
-        public override string name { get { return "Shader Graph Mesh Output"; } }
-
-        public override VFXExpressionMapper GetExpressionMapper(VFXDeviceTarget target)
-        {
-            var mapper = base.GetExpressionMapper(target);
-
-            switch (target)
-            {
-                case VFXDeviceTarget.CPU:
-                    mapper.AddExpression(inputSlots.First(s => s.name == "mesh").GetExpression(), "mesh", -1);
-                    mapper.AddExpression(inputSlots.First(s => s.name == "subMeshMask").GetExpression(), "subMeshMask", -1);
-                    break;
-            }
-
-            return mapper;
-        }
-    }
-
-    [VFXInfo]
-    class VFXHDRPPlanarShaderGraphOutput : VFXHDRPShaderGraphOutput
-    {
-        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField]
-        protected VFXPrimitiveType primitiveType = VFXPrimitiveType.Quad;
-
-        protected override IEnumerable<VFXPropertyWithValue> inputProperties
-        {
-            get
-            {
-                var properties = base.inputProperties;
-                if (primitiveType == VFXPrimitiveType.Octagon)
-                    properties = properties.Concat(PropertiesFromType(typeof(VFXPlanarPrimitiveHelper.OctagonInputProperties)));
-                return properties;
-            }
-        }
-
-        protected override IEnumerable<VFXNamedExpression> CollectGPUExpressions(IEnumerable<VFXNamedExpression> slotExpressions)
-        {
-            foreach (var exp in base.CollectGPUExpressions(slotExpressions))
-                yield return exp;
-
-            if (primitiveType == VFXPrimitiveType.Octagon)
-                yield return slotExpressions.First(o => o.name == "cropFactor");
-        }
-
-        public override string name { get { return "Shader Graph " + primitiveType.ToString() + " Output"; } }
-        public override VFXTaskType taskType
-        {
-            get
-            {
-                return VFXPlanarPrimitiveHelper.GetTaskType(primitiveType);
-            }
-        }
-    }
 }
+
+#endif

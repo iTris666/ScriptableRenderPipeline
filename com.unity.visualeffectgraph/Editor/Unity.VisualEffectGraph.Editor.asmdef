@@ -3,9 +3,9 @@
     "references": [
         "Unity.VisualEffectGraph.Runtime",
         "Unity.Timeline",
-        "Unity.RenderPipelines.HighDefinition.Runtime"
+        "Unity.RenderPipelines.HighDefinition.Runtime",
+        "Unity.ShaderGraph.Editor"
     ],
-    "optionalUnityReferences": [],
     "includePlatforms": [
         "Editor"
     ],
@@ -35,6 +35,11 @@
             "name": "com.unity.render-pipelines.lightweight",
             "expression": "1.0.0",
             "define": "VFX_HAS_LWRP"
+        },
+        {
+            "name": "com.unity.shadergraph",
+            "expression": "1.0.0",
+            "define": "VFX_HAS_SG"
         }
     ]
 }

@@ -12,7 +12,7 @@ namespace UnityEditor.VFX
 {
     interface ISpecificGenerationOutput
     {
-        StringBuilder GenerateShader(ref VFXInfos infos);
+        string GenerateShader(ref VFXInfos infos);
     }
     struct VFXInfos
     {
@@ -456,7 +456,12 @@ namespace UnityEditor.VFX
 
                 infos.parameters = parameters.ToString();
 
-                return (context as ISpecificGenerationOutput).GenerateShader(ref infos);
+                string result = (context as ISpecificGenerationOutput).GenerateShader(ref infos);
+
+                if (result == null)
+                    return null;
+
+                return new StringBuilder(result);
             } 
             var stringBuilder = GetFlattenedTemplateContent(templatePath, new List<string>(), context.additionalDefines);
 

@@ -1,7 +1,8 @@
+#if VFX_HAS_SG
 using UnityEngine;
 using UnityEditor.ShaderGraph;
 
-namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
+namespace UnityEditor.VFX.SG
 {
     class PassPart : ShaderPart
     {
@@ -48,3 +49,4 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.VFXSG
         }
     }
 }
+#endif
