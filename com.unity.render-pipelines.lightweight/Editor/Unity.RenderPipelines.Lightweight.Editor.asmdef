@@ -8,7 +8,6 @@
         "Unity.RenderPipelines.Core.Editor",
         "Unity.ShaderGraph.Editor"
     ],
-    "optionalUnityReferences": [],
     "includePlatforms": [
         "Editor"
     ],
@@ -18,5 +17,11 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": []
+    "versionDefines": [
+        {
+            "name": "com.unity.visualeffectgraph",
+            "expression": "7.0.0",
+            "define": "LWRP_HAS_VFX"
+        }
+    ]
 }

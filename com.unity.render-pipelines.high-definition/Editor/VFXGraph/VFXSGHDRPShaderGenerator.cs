@@ -1,3 +1,4 @@
+#if LWRP_HAS_VFX
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -117,6 +118,16 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                                         @"#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc"""
                 };
         }
+
+        internal readonly static PassInfo[] unlitPassInfo = new PassInfo[]
+        {
+                new PassInfo("ShadowCaster",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("SceneSelectionPass",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("DepthForwardOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("MotionVectors",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("ForwardOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("META",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+        };
 
         internal override Dictionary<Type, MasterNodeInfo> masterNodes => s_MasterNodeInfos;
 
@@ -514,7 +525,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             {typeof(HDUnlitMasterNode), new MasterNodeInfo(HDunlitPassInfos,PrepareHDUnlitMasterNode) },
             {typeof(FabricMasterNode), new MasterNodeInfo(HDfabricPassInfos,PrepareFabricMasterNode) },
             {typeof(HairMasterNode), new MasterNodeInfo(HDhairPassInfos,PrepareHairMasterNode) },
-            {typeof(UnlitMasterNode), new MasterNodeInfo(Graph.unlitPassInfo,null) },
+            {typeof(UnlitMasterNode), new MasterNodeInfo(unlitPassInfo,null) },
         };
 
         internal override bool ModifyPass(PassPart pass, ref VFXInfos vfxInfos, List<VFXSGShaderGenerator.VaryingAttribute> varyingAttributes, GraphData graphData)
@@ -613,3 +624,4 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         }
     }
 }
+#endif
