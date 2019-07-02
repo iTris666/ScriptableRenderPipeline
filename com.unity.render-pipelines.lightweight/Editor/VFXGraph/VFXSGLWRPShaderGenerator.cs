@@ -40,12 +40,14 @@ namespace UnityEditor.RenderPipeline.LWpipeline
 
         internal override IEnumerable<string> GetPerPassSpecificIncludes()
         {
-            return new string[]{ @"#define UNITY_VERTEX_INPUT_INSTANCE_ID uint particleID : SV_InstanceID; ParticleVaryings vparticle;",
-                        @"#define UNITY_TRANSFER_INSTANCE_ID(a,b) b.particleID = a.particuleID"};
+            return new string[]{};
         }
 
         internal override bool ModifyPass(PassPart pass, ref VFXInfos vfxInfos, List<VFXSGShaderGenerator.VaryingAttribute> varyingAttributes, GraphData graphData)
         {
+            pass.InsertShaderCode(0, @"
+#define UNITY_VERTEX_INPUT_INSTANCE_ID uint particleID : SV_InstanceID; ParticleMeshToPS vparticle;
+#define UNITY_TRANSFER_INSTANCE_ID(a,b) b.particleID = a.particuleID");
             //Replace CBUFFER and TEXTURE bindings by the one from the VFX
             int cBuffer = pass.IndexOfLineMatching(@"CBUFFER_START");
             if (cBuffer != -1)
@@ -60,7 +62,7 @@ namespace UnityEditor.RenderPipeline.LWpipeline
                     {
                         pass.shaderCode.RemoveAt(cBufferEnd);
                     }
-                    pass.shaderCode.RemoveRange(cBuffer, cBufferEnd - cBuffer + 1);
+                    pass.shaderCode.RemoveRange(cBuffer, cBufferEnd - cBuffer);
                 }
 
                 pass.InsertShaderCode(cBuffer, vfxInfos.parameters);
@@ -68,19 +70,17 @@ namespace UnityEditor.RenderPipeline.LWpipeline
 
             int surfaceDescCall = pass.IndexOfLineMatching(@"SurfaceDescription\s+surf\s*=\s*PopulateSurfaceData\s*\(\s*surfaceInput\s*\)\;");
             if (surfaceDescCall != -1)
-            {
-                pass.shaderCode[surfaceDescCall] = @"SurfaceDescription surf = PopulateSurfaceData(surfaceInput, IN.particleID, IN.vparticle);";
-                return true;
-            }
-            /*
+                pass.shaderCode[surfaceDescCall] = @"          SurfaceDescription surf = PopulateSurfaceData(surfaceInput, IN.particleID, IN.vparticle);";
+
+            int functionIndex;
             // Inject attribute load code to SurfaceDescriptionFunction
-            List<string> functionSurfaceDefinition = pass.ExtractFunction("SurfaceDescription", "SurfaceDescriptionFunction", out functionIndex, "SurfaceDescriptionInputs", "IN");
+            List<string> functionSurfaceDefinition = pass.ExtractFunction("SurfaceDescription", "PopulateSurfaceData", out functionIndex, "SurfaceDescriptionInputs", "IN");
 
             if (functionSurfaceDefinition != null)
             {
                 pass.InsertShaderLine(functionIndex - 1, "ByteAddressBuffer attributeBuffer;");
 
-                functionSurfaceDefinition[0] = "SurfaceDescription SurfaceDescriptionFunction(SurfaceDescriptionInputs IN,ParticleMeshToPS vParticle)";
+                functionSurfaceDefinition[0] = "SurfaceDescription PopulateSurfaceData(SurfaceDescriptionInputs IN,uint particleID,ParticleMeshToPS vParticle)";
 
                 for (int i = 0; i < 2; ++i)
                 {
@@ -88,7 +88,7 @@ namespace UnityEditor.RenderPipeline.LWpipeline
                 }
                 int cptLine = 2;
                 //Load attributes from the ByteAddressBuffer
-                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    uint index = IN.particleID;");
+                pass.InsertShaderLine((cptLine++) + functionIndex, "                                    uint index = particleID;");
                 pass.InsertShaderLine((cptLine++) + functionIndex, "                                    " + vfxInfos.loadAttributes.Replace("\n", "\n                                    "));
 
                 // override attribute load with value from varyings in case of attribute values modified in output context
@@ -127,7 +127,7 @@ namespace UnityEditor.RenderPipeline.LWpipeline
                 {
                     pass.InsertShaderLine((cptLine++) + functionIndex, functionSurfaceDefinition[i]);
                 }
-            }*/
+            }
             return false;
         }
 

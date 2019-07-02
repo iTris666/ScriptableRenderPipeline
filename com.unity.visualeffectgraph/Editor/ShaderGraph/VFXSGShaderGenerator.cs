@@ -392,7 +392,7 @@ struct ParticleMeshToPS
             functionRegistry.builder.currentNode = null;
 
             sb.Append(sg.ToString());
-            shader.Append(s_GenerateVertex[vfxInfos.renderingType](vfxInfos));
+            shader.Append(s_GenerateVertex[vfxInfos.renderingType]);
             shader.Append("    " + vfxInfos.loadAttributes.Replace("\n", "\n    "));
 
             shader.AppendLine(@"
@@ -449,7 +449,7 @@ struct ParticleMeshToPS
             shader.AppendLine("#pragma vertex ParticleVert");
         }
 
-        delegate string GenerateVertexPartDelegate(VFXInfos vfxInfos);
+        delegate string GenerateVertexPartDelegate();
 
         static readonly Dictionary<VFXTaskType, GenerateVertexPartDelegate> s_GenerateVertex = new Dictionary<VFXTaskType, GenerateVertexPartDelegate>
         {
@@ -459,7 +459,7 @@ struct ParticleMeshToPS
             { VFXTaskType.ParticleOctagonOutput,GenerateVertexPartOct },
         };
 
-        private static string GenerateVertexPartMesh(VFXInfos vfxInfos)
+        private static string GenerateVertexPartMesh()
         {
             return @"
 
@@ -469,7 +469,7 @@ PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
 ";
         }
 
-        private static string GenerateVertexPartQuad(VFXInfos vfxInfos)
+        private static string GenerateVertexPartQuad()
         {
             return @"
 
@@ -489,7 +489,7 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceI
 ";
         }
 
-        private static string GenerateVertexPartTri(VFXInfos vfxInfos)
+        private static string GenerateVertexPartTri()
         {
             return @"
 
@@ -514,7 +514,7 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID)
 ";
         }
 
-        private static string GenerateVertexPartOct(VFXInfos vfxInfos)
+        private static string GenerateVertexPartOct()
         {
             return @"
 
