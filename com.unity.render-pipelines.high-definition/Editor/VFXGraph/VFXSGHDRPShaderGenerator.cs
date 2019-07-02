@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 using UnityEditor.ShaderGraph;
 using UnityEditor.VFX.SG;
@@ -127,9 +128,33 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 new PassInfo("ForwardOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
                 new PassInfo("META",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
         };
-
         internal override string vertexReturnType { get => "PackedVaryingsType"; }
         internal override string vertexInputType { get => "AttributesMesh"; }
+
+        internal override string GetParticleVertexFunctionBottom(IEnumerable<string> varyingAttributes, string originalVertexFunction)
+        {
+            StringBuilder sb = new StringBuilder();
+            // override the positionOS with the particle position and call the standard Vert function
+            sb.Append(@"
+    float3 objectPos = inputMesh.positionOS;
+    float3 particlePos = mul(elementToVFX,float4(objectPos,1)).xyz;
+    inputMesh.positionOS = particlePos;
+    PackedVaryingsType result = Vert(inputMesh);
+");
+            //transfer modified attributes in the vfx output as varyings
+            foreach (var varyingAttribute in varyingAttributes)
+            {
+                sb.AppendFormat(@"
+    result.vparticle.{0} = {0};", varyingAttribute);
+            }
+
+            // transfer particle ID
+            sb.Append(@"
+    result.vmesh.particleID = inputMesh.particleID; // transmit the instanceID to the pixel shader through the varyings
+    return result;
+}");
+            return sb.ToString();
+        }
 
         internal override Dictionary<Type, MasterNodeInfo> masterNodes => s_MasterNodeInfos;
 
