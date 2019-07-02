@@ -38,7 +38,8 @@ namespace UnityEditor.VFX.SG
             sb.AppendLine("Pass");
             sb.AppendLine("{");
             sb.IncreaseIndent();
-            sb.AppendLine("name \"{0}\"",name);
+            if( !string.IsNullOrEmpty(name))
+                sb.AppendLine("name \"{0}\"",name);
             base.AppendContentTo(sb);
             sb.DecreaseIndent();
             sb.AppendLine("}");

@@ -487,13 +487,17 @@ namespace UnityEditor.VFX.SG
 
         int ParseTags(string document,RangeInt param)
         {
-            if (document[param.start] == '{')
+            while(document[param.start] != '{' && param.length > 0)
             {
                 param.start++;
                 param.length--;
             }
-            if (document[param.start + param.length] == '}')
+            param.start++;
+            param.length--;
+
+            while (document[param.start + param.length] != '}' && param.length > 0)
                 param.length--;
+            param.length--;
 
             string key = null;
 
@@ -507,6 +511,8 @@ namespace UnityEditor.VFX.SG
                         break;
                     ++pos;
                 }
+                if (pos >= param.end)
+                    break;
                 if (document[pos] == '"')
                     pos++;
                 int startSentence = pos;
@@ -517,8 +523,8 @@ namespace UnityEditor.VFX.SG
                     ++pos;
                 }
                 int endSentence = pos;
-                if (document[endSentence-1] == '"')
-                    endSentence--;
+                while(document[--endSentence] != '"')
+                { }
 
                 if ( key == null)
                 {
