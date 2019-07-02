@@ -16,6 +16,8 @@ namespace UnityEditor.VFX.SG
             RangeInt paramName;
             RangeInt param;
 
+            name = "";
+
             int endIndex = document.LastIndexOf('}',totalRange.end,totalRange.length);
             startIndex += 1; // skip '{' itself
 

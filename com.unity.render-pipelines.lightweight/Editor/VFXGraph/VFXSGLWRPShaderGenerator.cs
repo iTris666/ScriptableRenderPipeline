@@ -23,11 +23,8 @@ namespace UnityEditor.RenderPipeline.LWpipeline
         internal readonly static PassInfo[] unlitPassInfo = new PassInfo[]
         {
                 new PassInfo("ShadowCaster",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
-                new PassInfo("SceneSelectionPass",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
-                new PassInfo("DepthForwardOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
-                new PassInfo("MotionVectors",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
-                new PassInfo("ForwardOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
-                new PassInfo("META",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("DepthOnly",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
+                new PassInfo("",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
         };
         internal override Dictionary<string, string> GetDefaultShaderVariables()
         {
@@ -38,7 +35,7 @@ namespace UnityEditor.RenderPipeline.LWpipeline
         {
             return Enumerable.Empty<string>();
         }
-        internal override string GetVertexGlue(IEnumerable<string> varyingAttributes, string originalVertexFunction)
+        internal override string GetParticleVertexFunctionBottom(IEnumerable<string> varyingAttributes, string originalVertexFunction)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -46,7 +43,7 @@ namespace UnityEditor.RenderPipeline.LWpipeline
     float3 objectPos = inputMesh.vertex;
     float3 particlePos = mul(elementToVFX,float4(objectPos,1)).xyz;
     inputMesh.vertex.xyz = particlePos;
-    VertexOutput result = "+ originalVertexFunction + @"(inputMesh);
+    GraphVertexOutput result = "+ originalVertexFunction + @"(inputMesh);
 ");
             //transfer modified attributes in the vfx output as varyings
             foreach (var varyingAttribute in varyingAttributes)
@@ -56,16 +53,16 @@ namespace UnityEditor.RenderPipeline.LWpipeline
             sb.Append(@"
     result.particleID = inputMesh.particleID; // transmit the instanceID to the pixel shader through the varyings
     return result;
-");
+}");
             return sb.ToString();
         }
 
 
-        internal override string vertexReturnType { get => "VertexOutput"; }
+        internal override string vertexReturnType { get => "GraphVertexOutput"; }
         internal override string vertexInputType { get => "GraphVertexInput"; }
         internal override IEnumerable<string> GetPerPassSpecificIncludes()
         {
-            return new string[] { @"#define VFX_VARYING_PS_INPUTS VertexOutput",
+            return new string[] { @"#define VFX_VARYING_PS_INPUTS GraphVertexOutput",
                                         @"#define VFX_VARYING_POSCS position",
                                         @"#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/LWRP/VFXCommon.cginc""",
                                         @"#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc"""

@@ -28,7 +28,7 @@ ${Defines}
     #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 
 ${Graph}
-	struct VertexOutput
+	struct GraphVertexOutput
 	{
 	    float2 uv           : TEXCOORD0;
 	    float4 clipPos      : SV_POSITION;
@@ -39,9 +39,9 @@ ${VertexOutputStruct}
 
     float3 _LightDirection;
 
-    VertexOutput ShadowPassVertex(GraphVertexInput v)
+    GraphVertexOutput ShadowPassVertex(GraphVertexInput v)
 	{
-	    VertexOutput o;
+	    GraphVertexOutput o;
 	    UNITY_SETUP_INSTANCE_ID(v);
         UNITY_TRANSFER_INSTANCE_ID(v, o);
 
@@ -72,7 +72,7 @@ ${VertexShaderOutputs}
 	    return o;
 	}
 
-    half4 ShadowPassFragment(VertexOutput IN ${FaceSign}) : SV_TARGET
+    half4 ShadowPassFragment(GraphVertexOutput IN ${FaceSign}) : SV_TARGET
     {
         UNITY_SETUP_INSTANCE_ID(IN);
 
@@ -131,7 +131,7 @@ ${Defines}
     #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 
 ${Graph}
-	struct VertexOutput
+	struct GraphVertexOutput
 	{
 	    float2 uv           : TEXCOORD0;
 	    float4 clipPos      : SV_POSITION;
@@ -141,9 +141,9 @@ ${VertexOutputStruct}
         UNITY_VERTEX_OUTPUT_STEREO
 	};
 
-    VertexOutput vert(GraphVertexInput v)
+    GraphVertexOutput vert(GraphVertexInput v)
     {
-        VertexOutput o = (VertexOutput)0;
+        GraphVertexOutput o = (GraphVertexOutput)0;
 	    UNITY_SETUP_INSTANCE_ID(v);
         UNITY_TRANSFER_INSTANCE_ID(v, o);
         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
@@ -163,7 +163,7 @@ ${VertexShaderOutputs}
 	    return o;
     }
 
-    half4 frag(VertexOutput IN ${FaceSign}) : SV_TARGET
+    half4 frag(GraphVertexOutput IN ${FaceSign}) : SV_TARGET
     {
         UNITY_SETUP_INSTANCE_ID(IN);
 		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);
@@ -220,7 +220,7 @@ ${Defines}
     #pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 
     ${Graph}
-	struct VertexOutput
+	struct GraphVertexOutput
 	{
 	    float2 uv           : TEXCOORD0;
 	    float4 clipPos      : SV_POSITION;
@@ -230,9 +230,9 @@ ${VertexOutputStruct}
         UNITY_VERTEX_OUTPUT_STEREO
 	};
 
-    VertexOutput vert(GraphVertexInput v)
+    GraphVertexOutput vert(GraphVertexInput v)
     {
-        VertexOutput o = (VertexOutput)0;
+        GraphVertexOutput o = (GraphVertexOutput)0;
 	    UNITY_SETUP_INSTANCE_ID(v);
         UNITY_TRANSFER_INSTANCE_ID(v, o);
         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
@@ -246,7 +246,7 @@ ${VertexShaderOutputs}
 	    return o;
     }
 
-    half4 frag(VertexOutput IN ${FaceSign}) : SV_TARGET
+    half4 frag(GraphVertexOutput IN ${FaceSign}) : SV_TARGET
     {
         UNITY_SETUP_INSTANCE_ID(IN);
 		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(IN);

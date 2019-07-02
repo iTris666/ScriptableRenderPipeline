@@ -314,7 +314,7 @@ struct ParticleMeshToPS
                 }
             }
 
-            internal abstract string GetVertexGlue(IEnumerable<string> enumerable,string originalVertexFunc);
+            internal abstract string GetParticleVertexFunctionBottom(IEnumerable<string> enumerable,string originalVertexFunc);
         }
 
         internal static string GenerateShader(Shader shaderGraph, ref VFXInfos vfxInfos)
@@ -371,15 +371,22 @@ struct ParticleMeshToPS
                 pass.InsertShaderLine(-1, include);
             }
 
+            int pragmaVertexIndex = pass.IndexOfLineMatching(@"\s*#pragma\s+vertex\s+");
+
+            string vertexFunctionName = "Vert";
+            if ( pragmaVertexIndex != 1)
+                vertexFunctionName = pass.shaderCode[pragmaVertexIndex].Split(new char[] { ' ' },StringSplitOptions.RemoveEmptyEntries).Last().Trim();
+
+            pass.shaderCode.RemoveAt(pragmaVertexIndex);
+
             var sb = new StringBuilder();
-            GenerateParticleVert(graph, vfxInfos, pipelineInfos, sb, currentPass, varyingAttributes);
+            GenerateParticleVert(graph, vfxInfos, pipelineInfos, sb, currentPass, varyingAttributes, vertexFunctionName);
             pass.InsertShaderCode(-1, sb.ToString());
-            pass.RemoveShaderCodeContaining("#pragma vertex Vert");
 
             pipelineInfos.ModifyPass(pass, ref vfxInfos, varyingAttributes, graph.graphData);
         }
 
-        private static void GenerateParticleVert(Graph graph, VFXInfos vfxInfos, PipelineInfo pipelineInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)
+        private static void GenerateParticleVert(Graph graph, VFXInfos vfxInfos, PipelineInfo pipelineInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes,string shaderFunctionName)
         {
             // ParticleVert will replace the standard HDRP Vert function as vertex function
 
@@ -418,8 +425,8 @@ struct ParticleMeshToPS
     float4x4 elementToVFX = GetElementToVFXMatrix(axisX,axisY,axisZ,float3(angleX,angleY,angleZ),float3(pivotX,pivotY,pivotZ),size3,position);
 ");
 
-            shader.Append(pipelineInfos.GetVertexGlue(varyingAttributes.Select(t => t.name),"Vert"));
-            shader.AppendLine("#pragma vertex ParticleVert");
+            shader.Append(pipelineInfos.GetParticleVertexFunctionBottom(varyingAttributes.Select(t => t.name), shaderFunctionName));
+            shader.AppendLine("\n#pragma vertex ParticleVert");
         }
 
         delegate string GenerateVertexPartDelegate(string returnType, string inputType);
