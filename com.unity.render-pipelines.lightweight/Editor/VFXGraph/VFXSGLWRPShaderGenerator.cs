@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 using UnityEngine;
 
@@ -37,14 +38,38 @@ namespace UnityEditor.RenderPipeline.LWpipeline
         {
             return Enumerable.Empty<string>();
         }
+        internal override string GetVertexGlue(IEnumerable<string> varyingAttributes, string originalVertexFunction)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append(@"
+    float3 objectPos = inputMesh.vertex;
+    float3 particlePos = mul(elementToVFX,float4(objectPos,1)).xyz;
+    inputMesh.vertex.xyz = particlePos;
+    VertexOutput result = "+ originalVertexFunction + @"(inputMesh);
+");
+            //transfer modified attributes in the vfx output as varyings
+            foreach (var varyingAttribute in varyingAttributes)
+                sb.AppendFormat(@"
+    result.vparticle.{0} = {0};", varyingAttribute);
+            // transfer particle ID
+            sb.Append(@"
+    result.particleID = inputMesh.particleID; // transmit the instanceID to the pixel shader through the varyings
+    return result;
+");
+            return sb.ToString();
+        }
 
 
         internal override string vertexReturnType { get => "VertexOutput"; }
-        internal override string vertexInputType { get => "AttributeMesh"; }
-
+        internal override string vertexInputType { get => "GraphVertexInput"; }
         internal override IEnumerable<string> GetPerPassSpecificIncludes()
         {
-            return new string[]{};
+            return new string[] { @"#define VFX_VARYING_PS_INPUTS VertexOutput",
+                                        @"#define VFX_VARYING_POSCS position",
+                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/RenderPipeline/LWRP/VFXCommon.cginc""",
+                                        @"#include ""Packages/com.unity.visualeffectgraph/Shaders/VFXCommon.cginc"""
+                };
         }
 
         internal override bool ModifyPass(PassPart pass, ref VFXInfos vfxInfos, List<VFXSGShaderGenerator.VaryingAttribute> varyingAttributes, GraphData graphData)

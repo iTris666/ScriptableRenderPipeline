@@ -268,7 +268,7 @@ struct ParticleMeshToPS
 
         static readonly Dictionary<System.Type, PipelineInfo> s_PipelineInfos = new Dictionary<Type, PipelineInfo>();
 
-        internal static void RegisterPipeline(Type pipelineAssetType,PipelineInfo info)
+        internal static void RegisterPipeline(Type pipelineAssetType, PipelineInfo info)
         {
             s_PipelineInfos[pipelineAssetType] = info;
         }
@@ -291,7 +291,7 @@ struct ParticleMeshToPS
             internal abstract string vertexReturnType { get; }
             internal abstract string vertexInputType { get; }
 
-            internal void ReplaceCBuffer(PassPart pass,ref VFXInfos vfxInfos)
+            internal void ReplaceCBuffer(PassPart pass, ref VFXInfos vfxInfos)
             {
                 //Replace CBUFFER and TEXTURE bindings by the one from the VFX
                 int cBuffer = pass.IndexOfLineMatching(@"CBUFFER_START");
@@ -313,6 +313,8 @@ struct ParticleMeshToPS
                     pass.InsertShaderCode(cBuffer, vfxInfos.parameters);
                 }
             }
+
+            internal abstract string GetVertexGlue(IEnumerable<string> enumerable,string originalVertexFunc);
         }
 
         internal static string GenerateShader(Shader shaderGraph, ref VFXInfos vfxInfos)
@@ -335,7 +337,7 @@ struct ParticleMeshToPS
                 masterNodeInfo.prepare(graph, guiVariables, defines);
 
             int cptLine = 0;
-            foreach( var include in pipelineInfos.GetSpecificIncludes())
+            foreach (var include in pipelineInfos.GetSpecificIncludes())
             {
                 document.InsertShaderLine(cptLine++, include);
             }
@@ -350,7 +352,7 @@ struct ParticleMeshToPS
                 if (currentPass == -1)
                     continue;
 
-                GeneratePass(vfxInfos, graph, pipelineInfos,guiVariables, defines, varyingAttributes, pass, currentPass, ref masterNodeInfo);
+                GeneratePass(vfxInfos, graph, pipelineInfos, guiVariables, defines, varyingAttributes, pass, currentPass, ref masterNodeInfo);
             }
             foreach (var define in defines)
                 document.InsertShaderCode(0, string.Format("#define {0} {1}", define.Key, define.Value));
@@ -360,11 +362,11 @@ struct ParticleMeshToPS
             return document.ToString(false).Replace("\r", "");
         }
 
-        private static void GeneratePass(VFXInfos vfxInfos, Graph graph, PipelineInfo pipelineInfos,Dictionary<string, string> guiVariables, Dictionary<string, int> defines, List<VaryingAttribute> varyingAttributes, PassPart pass, int currentPass, ref MasterNodeInfo masterNodeInfo)
+        private static void GeneratePass(VFXInfos vfxInfos, Graph graph, PipelineInfo pipelineInfos, Dictionary<string, string> guiVariables, Dictionary<string, int> defines, List<VaryingAttribute> varyingAttributes, PassPart pass, int currentPass, ref MasterNodeInfo masterNodeInfo)
         {
             pass.InsertShaderCode(0, GenerateVaryingVFXAttribute(graph, vfxInfos, varyingAttributes));
 
-            foreach( var include in pipelineInfos.GetPerPassSpecificIncludes())
+            foreach (var include in pipelineInfos.GetPerPassSpecificIncludes())
             {
                 pass.InsertShaderLine(-1, include);
             }
@@ -377,7 +379,7 @@ struct ParticleMeshToPS
             pipelineInfos.ModifyPass(pass, ref vfxInfos, varyingAttributes, graph.graphData);
         }
 
-        private static void GenerateParticleVert(Graph graph,VFXInfos vfxInfos, PipelineInfo pipelineInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)
+        private static void GenerateParticleVert(Graph graph, VFXInfos vfxInfos, PipelineInfo pipelineInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)
         {
             // ParticleVert will replace the standard HDRP Vert function as vertex function
 
@@ -414,41 +416,9 @@ struct ParticleMeshToPS
 
             shader.AppendLine(@"
     float4x4 elementToVFX = GetElementToVFXMatrix(axisX,axisY,axisZ,float3(angleX,angleY,angleZ),float3(pivotX,pivotY,pivotZ),size3,position);
-    float3 objectPos = inputMesh.positionOS;
 ");
 
-            // add shader code to compute Position if any
-            shader.AppendLine(sb.ToString());
-            // add shader code to take new objectPos into account if the position slot is linked to something
-            var slot = graph.passes[currentPass].vertex.slots.FirstOrDefault(t => t.shaderOutputName == "Position");
-            if (slot != null)
-            {
-                var foundEdges = graph.graphData.GetEdges(slot.slotReference).ToArray();
-                if (foundEdges.Any())
-                {
-                    shader.AppendFormat("objectPos = {0};\n", graph.graphData.outputNode.GetSlotValue(slot.id, GenerationMode.ForReals));
-                }
-            }
-
-            // override the positionOS with the particle position and call the standard Vert function
-            shader.Append(@"float3 particlePos = mul(elementToVFX,float4(objectPos,1)).xyz;
-    inputMesh.positionOS = particlePos;
-    PackedVaryingsType result = Vert(inputMesh);
-");
-
-            //transfer modified attributes in the vfx output as varyings
-            foreach (var varyingAttribute in varyingAttributes)
-            {
-                shader.AppendFormat(@"
-    result.vparticle.{0} = {0};", varyingAttribute.name);
-            }
-
-            // transfer particle ID
-            shader.Append(@"
-    result.vmesh.particleID = inputMesh.particleID; // transmit the instanceID to the pixel shader through the varyings
-    return result;
-}
-");
+            shader.Append(pipelineInfos.GetVertexGlue(varyingAttributes.Select(t => t.name),"Vert"));
             shader.AppendLine("#pragma vertex ParticleVert");
         }
 

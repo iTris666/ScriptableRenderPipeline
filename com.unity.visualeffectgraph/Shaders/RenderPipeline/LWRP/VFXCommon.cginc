@@ -3,8 +3,11 @@
 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.lightweight/ShaderLibrary/Shadows.hlsl"
 
+
 Texture2D _CameraDepthTexture;
+#if !UNITY_VFX_ACTIVE
 float3 _LightDirection;
+#endif
 
 void VFXTransformPSInputs(inout VFX_VARYING_PS_INPUTS input) {}
 
