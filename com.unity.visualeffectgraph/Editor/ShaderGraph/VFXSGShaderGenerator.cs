@@ -288,6 +288,9 @@ struct ParticleMeshToPS
                 get;
             }
 
+            internal abstract string vertexReturnType { get; }
+            internal abstract string vertexInputType { get; }
+
             internal void ReplaceCBuffer(PassPart pass,ref VFXInfos vfxInfos)
             {
                 //Replace CBUFFER and TEXTURE bindings by the one from the VFX
@@ -367,14 +370,14 @@ struct ParticleMeshToPS
             }
 
             var sb = new StringBuilder();
-            GenerateParticleVert(graph, vfxInfos, sb, currentPass, varyingAttributes);
+            GenerateParticleVert(graph, vfxInfos, pipelineInfos, sb, currentPass, varyingAttributes);
             pass.InsertShaderCode(-1, sb.ToString());
             pass.RemoveShaderCodeContaining("#pragma vertex Vert");
 
             pipelineInfos.ModifyPass(pass, ref vfxInfos, varyingAttributes, graph.graphData);
         }
 
-        private static void GenerateParticleVert(Graph graph,VFXInfos vfxInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)
+        private static void GenerateParticleVert(Graph graph,VFXInfos vfxInfos, PipelineInfo pipelineInfos, StringBuilder shader, int currentPass, List<VaryingAttribute> varyingAttributes)
         {
             // ParticleVert will replace the standard HDRP Vert function as vertex function
 
@@ -392,7 +395,7 @@ struct ParticleMeshToPS
             functionRegistry.builder.currentNode = null;
 
             sb.Append(sg.ToString());
-            shader.Append(s_GenerateVertex[vfxInfos.renderingType]);
+            shader.Append(s_GenerateVertex[vfxInfos.renderingType](pipelineInfos.vertexReturnType, pipelineInfos.vertexInputType));
             shader.Append("    " + vfxInfos.loadAttributes.Replace("\n", "\n    "));
 
             shader.AppendLine(@"
@@ -449,7 +452,7 @@ struct ParticleMeshToPS
             shader.AppendLine("#pragma vertex ParticleVert");
         }
 
-        delegate string GenerateVertexPartDelegate();
+        delegate string GenerateVertexPartDelegate(string returnType, string inputType);
 
         static readonly Dictionary<VFXTaskType, GenerateVertexPartDelegate> s_GenerateVertex = new Dictionary<VFXTaskType, GenerateVertexPartDelegate>
         {
@@ -459,25 +462,21 @@ struct ParticleMeshToPS
             { VFXTaskType.ParticleOctagonOutput,GenerateVertexPartOct },
         };
 
-        private static string GenerateVertexPartMesh()
+        private static string GenerateVertexPartMesh(string returnType,string inputType)
         {
-            return @"
-
-PackedVaryingsType ParticleVert(AttributesMesh inputMesh)
+            return returnType + @" ParticleVert("+ inputType + @" inputMesh)
 {
     uint index = inputMesh.particleID;
 ";
         }
 
-        private static string GenerateVertexPartQuad()
+        private static string GenerateVertexPartQuad(string returnType, string inputType)
         {
-            return @"
-
-PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceID)
+            return returnType + @" ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceID)
 {
 	uint particleID = (id >> 2) + instID * 2048;
     uint index = particleID;
-    AttributesMesh inputMesh = (AttributesMesh)0;
+    "+ inputType + @" inputMesh = ("+ inputType + @")0;
     float2 uv;
     uv.x = float(id & 1);
 	uv.y = float((id & 2) >> 1);
@@ -489,15 +488,13 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceI
 ";
         }
 
-        private static string GenerateVertexPartTri()
+        private static string GenerateVertexPartTri(string returnType, string inputType)
         {
-            return @"
-
-PackedVaryingsType ParticleVert(uint id : SV_VertexID)
+            return returnType + @" ParticleVert(uint id : SV_VertexID)
 {
 	uint particleID = id / 3;
     uint index = particleID;
-    AttributesMesh inputMesh = (AttributesMesh)0;
+    " + inputType + @" inputMesh = (" + inputType + @")0;
 	const float2 kOffsets[] = {
 		float2(-0.5f, 	-0.288675129413604736328125f),
 		float2(0.0f, 	0.57735025882720947265625f),
@@ -514,15 +511,13 @@ PackedVaryingsType ParticleVert(uint id : SV_VertexID)
 ";
         }
 
-        private static string GenerateVertexPartOct()
+        private static string GenerateVertexPartOct(string returnType, string inputType)
         {
-            return @"
-
-PackedVaryingsType ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceID)
+            return returnType + @" ParticleVert(uint id : SV_VertexID,uint instID : SV_InstanceID)
 {
 	uint particleID = (id >> 3) + instID * 1024;
     uint index = particleID;
-    AttributesMesh inputMesh = (AttributesMesh)0;
+    " + inputType + @" inputMesh = (" + inputType + @")0;
 	const float2 kUvs[8] = 
 	{
 		float2(-0.5f,	0.0f),

@@ -38,6 +38,10 @@ namespace UnityEditor.RenderPipeline.LWpipeline
             return Enumerable.Empty<string>();
         }
 
+
+        internal override string vertexReturnType { get => "VertexOutput"; }
+        internal override string vertexInputType { get => "AttributeMesh"; }
+
         internal override IEnumerable<string> GetPerPassSpecificIncludes()
         {
             return new string[]{};

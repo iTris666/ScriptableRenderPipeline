@@ -128,6 +128,9 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 new PassInfo("META",new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.AlphaSlotId,UnlitMasterNode.AlphaThresholdSlotId,UnlitMasterNode.ColorSlotId})),new FunctionInfo(new List<int>(new int[]{UnlitMasterNode.PositionSlotId }))),
         };
 
+        internal override string vertexReturnType { get => "PackedVaryingsType"; }
+        internal override string vertexInputType { get => "AttributesMesh"; }
+
         internal override Dictionary<Type, MasterNodeInfo> masterNodes => s_MasterNodeInfos;
 
         private static void PrepareHDLitMasterNode(Graph graph, Dictionary<string, string> guiVariables, Dictionary<string, int> defines)
