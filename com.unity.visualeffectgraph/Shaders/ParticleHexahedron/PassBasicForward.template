@@ -7,6 +7,8 @@ Pass
 	#pragma target 4.5
 	${VFXPassForwardAdditionalPragma}
 	
+	${VFXSGParticleAttributesStruct}
+	
 	struct ps_input
 	{
 		float4 pos : SV_POSITION;
@@ -23,7 +25,10 @@ Pass
 		#if VFX_NEEDS_POSWS_INTERPOLATOR
 		float3 posWS : TEXCOORD3;
 		#endif
-		
+#if UNITY_VFX_SG
+        ParticleAttributes particle;
+#endif
+
 		#if WRITE_MOTION_VECTOR_IN_FORWARD
 		float4 cPosPrevious : TEXCOORD4;
 		float4 cPosNonJiterred : TEXCOORD5;
@@ -55,7 +60,7 @@ Pass
 #define VFX_VARYING_VELOCITY_CPOS cPosNonJiterred
 #define VFX_VARYING_VELOCITY_CPOS_PREVIOUS cPosPrevious
 #endif
-
+								
 	${VFXInclude("Shaders/ParticleHexahedron/Pass.template")}	
 		
 	#pragma fragment frag
@@ -64,9 +69,21 @@ Pass
 		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 		ps_output o = (ps_output)0;
 		VFXTransformPSInputs(i);
+#if UNITY_VFX_SG
+        FragInputs formattedInputs;
+        formattedInputs = (FragInputs)0;
+        formattedInputs.positionRWS = i.pos;
+        formattedInputs.tangentToWorld = BuildTangentToWorld(VFXCubeGetLocalTangent(i), VFXCubeGetLocalNormal(i));
+        formattedInputs.texCoord0 = VFXCubeGetUV(i);
+        formattedInputs.texCoord0 = VFXCubeGetUV(i);
+        formattedInputs.color = i.color;
 		
+        i.particle.color.a *= VFXGetSoftParticleFade(formattedInputs);
+        o.color = GetSurfaceFunction(formattedInputs,i.particle);
+#else
 		o.color = VFXGetFragmentColor(i);
 		o.color *= VFXGetTextureColorWithProceduralUV(VFX_SAMPLER(mainTexture),i,VFXCubeGetUV(i));
+#endif
 		o.color = VFXApplyFog(o.color,i);
 		VFXClipFragmentColor(o.color.a,i);
 
