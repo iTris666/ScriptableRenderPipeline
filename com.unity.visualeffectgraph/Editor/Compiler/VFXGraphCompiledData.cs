@@ -797,6 +797,8 @@ namespace UnityEditor.VFX
 
                 foreach (var c in contexts) // Unflag all contexts
                     c.MarkAsCompiled(false);
+                foreach (var c in contexts) // Unflag all contexts
+                    c.BeginCompile();
 
                 IEnumerable<VFXContext> compilableContexts = contexts.Where(c => c.CanBeCompiled()).ToArray();
                 var compilableData = models.OfType<VFXData>().Where(d => d.CanBeCompiled());
@@ -942,6 +944,9 @@ namespace UnityEditor.VFX
                 {
                     k_FnVFXResource_SetCompileInitialVariants(m_Graph.visualEffectResource, forceShaderValidation);
                 }
+
+                foreach (var c in contexts) // Unflag all contexts
+                    c.EndCompile();
             }
             catch (Exception e)
             {

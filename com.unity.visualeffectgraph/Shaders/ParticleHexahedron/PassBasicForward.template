@@ -7,15 +7,23 @@ Pass
 	#pragma target 4.5
 	${VFXPassForwardAdditionalPragma}
 	
-	${VFXSGParticleAttributesStruct}
+#if UNITY_VFX_SG
+	${VFXSGParticleAttributesStruct_Forward}
+#endif
 	
 	struct ps_input
 	{
 		float4 pos : SV_POSITION;
 		float3 offsets : TEXCOORD0;
+#if UNITY_VFX_SG        
+        #if VFX_SG_PIXEL_REQUIRE_COLOR_FORWARD
+            nointerpolation float4 color : COLOR0;
+        #endif
+#else
 		#if VFX_NEEDS_COLOR_INTERPOLATOR
 		nointerpolation float4 color : COLOR0;
 		#endif
+#endif
 		#if USE_SOFT_PARTICLE || USE_ALPHA_TEST
 		// x: inverse soft particles fade distance
 		// y: alpha threshold
@@ -62,6 +70,29 @@ Pass
 #endif
 								
 	${VFXInclude("Shaders/ParticleHexahedron/Pass.template")}	
+    
+   
+#if UNITY_VFX_SG
+    ${GetSurfaceFunctionDefinition_Forward}
+    
+    FragInputs GetFormattedInputs(ps_inputs i)
+    {
+        FragInputs formattedInputs = (FragInputs)0;
+        formattedInputs.positionRWS = i.pos;
+#if VFX_SG_PIXEL_REQUIRE_TANGENT_FORWARD || VFX_SG_PIXEL_REQUIRE_NORMAL_FORWARD
+        formattedInputs.tangentToWorld = BuildTangentToWorld(VFXCubeGetLocalTangent(i), VFXCubeGetLocalNormal(i));
+
+        
+#if VFX_SG_PIXEL_REQUIRE_TEXCOORD0_FORWARD
+        formattedInputs.texCoord0 = VFXCubeGetUV(i);
+#endif 
+    // mesh is procedural so texCoord1-3 are zero filled.
+#if VFX_SG_PIXEL_REQUIRE_COLOR
+        formattedInputs.color = i.color;
+#endif
+        return formattedInputs;
+    }
+#endif //UNITY_VFX_SG
 		
 	#pragma fragment frag
 	ps_output frag(ps_input i)
@@ -70,15 +101,9 @@ Pass
 		ps_output o = (ps_output)0;
 		VFXTransformPSInputs(i);
 #if UNITY_VFX_SG
-        FragInputs formattedInputs;
-        formattedInputs = (FragInputs)0;
-        formattedInputs.positionRWS = i.pos;
-        formattedInputs.tangentToWorld = BuildTangentToWorld(VFXCubeGetLocalTangent(i), VFXCubeGetLocalNormal(i));
-        formattedInputs.texCoord0 = VFXCubeGetUV(i);
-        formattedInputs.texCoord0 = VFXCubeGetUV(i);
-        formattedInputs.color = i.color;
+        FragInputs formattedInputs = GetFormattedInputs(i);
 		
-        i.particle.color.a *= VFXGetSoftParticleFade(formattedInputs);
+        i.particle.color.a *= VFXGetSoftParticleFade(i);
         o.color = GetSurfaceFunction(formattedInputs,i.particle);
 #else
 		o.color = VFXGetFragmentColor(i);
