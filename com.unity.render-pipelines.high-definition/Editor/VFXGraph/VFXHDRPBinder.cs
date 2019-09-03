@@ -16,7 +16,12 @@ namespace UnityEditor.VFX.HDRP
 
         public override void SetupMaterial(Material mat)
         {
-            HDShaderUtils.ResetMaterialKeywords(mat);
+            try
+            {
+                HDShaderUtils.ResetMaterialKeywords(mat);
+            }
+            catch(ArgumentException) // Silently catch the 'Unknown shader' in case of non HDRP shaders
+            {}
         }
     }
 }
