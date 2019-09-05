@@ -1,5 +1,5 @@
 editors:
-  - version: 2019.3/staging
+  - version: 2019.3/update-SRP-7.1.1-VFX
 packages:
   - name: Core
     id: core

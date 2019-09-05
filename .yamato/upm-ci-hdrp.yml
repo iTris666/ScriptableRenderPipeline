@@ -1,5 +1,5 @@
 editors:
-  - version: 2019.3/staging
+  - version: 2019.3/update-SRP-7.1.1-VFX
 platforms:
   - name: Windows64
     type: Unity::VM::GPU
