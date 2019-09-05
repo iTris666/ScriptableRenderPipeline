@@ -354,12 +354,12 @@ namespace UnityEditor.VFX
                     var srcSlot = existingSlots.FirstOrDefault(s => s.property.name == dstSlot.property.name);
 
                     // Find the first slot with same type (should perform a more clever selection based on name distance)
-                    if (srcSlot == null)
-                        srcSlot = existingSlots.FirstOrDefault(s => s.property.type == dstSlot.property.type);
+                    //if (srcSlot == null)
+                    //    srcSlot = existingSlots.FirstOrDefault(s => s.property.type == dstSlot.property.type);
 
                     // Try to find a slot that can be implicitely converted
-                    if (srcSlot == null)
-                        srcSlot = existingSlots.FirstOrDefault(s => VFXConverter.CanConvertTo(s.property.type,dstSlot.property.type));
+                    //if (srcSlot == null)
+                    //    srcSlot = existingSlots.FirstOrDefault(s => VFXConverter.CanConvertTo(s.property.type,dstSlot.property.type));
 
                     if (srcSlot != null)
                     {

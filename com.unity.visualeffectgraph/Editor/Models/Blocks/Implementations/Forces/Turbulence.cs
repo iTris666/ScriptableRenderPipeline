@@ -89,7 +89,11 @@ velocity += {ForceHelper.ApplyForceString(Mode, "value")};";
             {
                 var newRoughness = inputSlots.FirstOrDefault(s => s.name == "roughness");
                 if (newRoughness != default(VFXSlot))
+                {
+                    var frequency = inputSlots.FirstOrDefault(s => s.name == "frequency");
+                    frequency.value = 1.5f; // Try to match old turbulence noise
                     VFXSlot.CopyLinksAndValue(newRoughness, oldRoughness, true);
+                }
             }
         }
     }

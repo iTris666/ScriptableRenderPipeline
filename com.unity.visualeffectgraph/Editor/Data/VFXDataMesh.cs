@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEditor.VFX;
+using UnityEngine.Serialization;
 using UnityEngine.VFX;
 using System.Text;
 
@@ -10,7 +10,7 @@ namespace UnityEditor.VFX
 {
     class VFXDataMesh : VFXData
     {
-        [SerializeField]
+        [SerializeField, FormerlySerializedAs("shader")]
         private Shader m_Shader;
 
         public Shader shader
