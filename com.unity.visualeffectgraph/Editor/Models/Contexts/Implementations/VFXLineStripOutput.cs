@@ -4,7 +4,7 @@ using UnityEngine.VFX;
 
 namespace UnityEditor.VFX
 {
-    [VFXInfo]
+    [VFXInfo(experimental = true)]
     class VFXLineStripOutput : VFXAbstractParticleOutput
     {
         protected VFXLineStripOutput() : base(true) { }

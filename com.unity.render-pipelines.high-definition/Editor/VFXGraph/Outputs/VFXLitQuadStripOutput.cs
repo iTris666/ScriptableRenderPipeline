@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace UnityEditor.VFX
 {
-    [VFXInfo]
+    [VFXInfo(experimental = true)]
     class VFXLitQuadStripOutput : VFXAbstractParticleHDRPLitOutput
     {
         protected VFXLitQuadStripOutput() : base(true) { } // strips

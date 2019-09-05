@@ -240,6 +240,9 @@ namespace UnityEditor.VFX
                 foreach (var s in base.filteredOutSettings)
                     yield return s;
 
+                if (!VFXViewPreference.displayExperimentalOperator) // TODO Name is bad!
+                    yield return "dataType";
+
                 if (hasStrip)
                 {
                     yield return "capacity";

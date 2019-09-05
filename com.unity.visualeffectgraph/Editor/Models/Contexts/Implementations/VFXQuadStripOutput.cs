@@ -5,7 +5,7 @@ using UnityEngine.VFX;
 
 namespace UnityEditor.VFX
 {
-    [VFXInfo]
+    [VFXInfo(experimental = true)]
     class VFXQuadStripOutput : VFXAbstractParticleOutput
     {
         [VFXSetting, SerializeField]
