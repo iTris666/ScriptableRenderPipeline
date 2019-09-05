@@ -523,3 +523,9 @@ VFXUVData GetUVData(float2 flipBookSize, float2 uv, float texIndex)
 ///////////
 
 #include "VFXNoise.hlsl"
+
+////////////
+// Strips //
+////////////
+
+#include "VFXParticleStripCommon.hlsl"
