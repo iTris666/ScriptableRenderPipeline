@@ -1991,6 +1991,8 @@ MonoBehaviour:
   indirectDraw: 0
   castShadows: 1
   useExposureWeight: 0
+  shaderGraph: {fileID: 0}
+  shadergraphGUID: 
   materialType: 0
   onlyAmbientLighting: 0
   diffusionProfileAsset: {fileID: 0}
