@@ -8,6 +8,7 @@ using UnityEditor.Experimental.AssetImporters;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.Graphing.Util;
+using UnityEditor.ShaderGraph.Internal;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -107,10 +108,10 @@ namespace UnityEditor.ShaderGraph
             asset.keywords = graph.keywords.ToList();
             asset.graphPrecision = graph.concretePrecision;
             asset.outputPrecision = outputNode.concretePrecision;
-            
+
             GatherFromGraph(assetPath, out var containsCircularDependency, out var descendents);
             asset.descendents.AddRange(descendents);
-            
+
             var childrenSet = new HashSet<string>();
             var anyErrors = false;
             foreach (var node in nodes)
@@ -123,7 +124,7 @@ namespace UnityEditor.ShaderGraph
                         asset.children.Add(subGraphGuid);
                     }
                 }
-                
+
                 if (node.hasError)
                 {
                     anyErrors = true;
@@ -148,15 +149,13 @@ namespace UnityEditor.ShaderGraph
                 if (node is IGeneratesFunction generatesFunction)
                 {
                     registry.builder.currentNode = node;
-                    generatesFunction.GenerateNodeFunction(registry, new GraphContext(asset.inputStructName), GenerationMode.ForReals);
+                    generatesFunction.GenerateNodeFunction(registry, GenerationMode.ForReals);
                     registry.builder.ReplaceInCurrentMapping(PrecisionUtil.Token, node.concretePrecision.ToShaderString());
                 }
             }
 
             registry.ProvideFunction(asset.functionName, sb =>
             {
-                var graphContext = new GraphContext(asset.inputStructName);
-
                 GraphUtil.GenerateSurfaceInputStruct(sb, asset.requirements, asset.inputStructName);
                 sb.AppendNewLine();
 
@@ -189,7 +188,7 @@ namespace UnityEditor.ShaderGraph
                         if (node is IGeneratesBodyCode generatesBodyCode)
                         {
                             sb.currentNode = node;
-                            generatesBodyCode.GenerateNodeCode(sb, graphContext, GenerationMode.ForReals);
+                            generatesBodyCode.GenerateNodeCode(sb, GenerationMode.ForReals);
                             sb.ReplaceInCurrentMapping(PrecisionUtil.Token, node.concretePrecision.ToShaderString());
                         }
                     }
@@ -201,7 +200,7 @@ namespace UnityEditor.ShaderGraph
                 }
             });
 
-            asset.functions.AddRange(registry.names.Select(x => new FunctionPair(x, registry.sources[x])));
+            asset.functions.AddRange(registry.names.Select(x => new FunctionPair(x, registry.sources[x].code)));
 
             var collector = new PropertyCollector();
             asset.nodeProperties = collector.properties;
@@ -212,20 +211,20 @@ namespace UnityEditor.ShaderGraph
 
             asset.OnBeforeSerialize();
         }
-        
+
         static void GatherFromGraph(string assetPath, out bool containsCircularDependency, out HashSet<string> descendentGuids)
         {
             var dependencyMap = new Dictionary<string, string[]>();
             using (var tempList = ListPool<string>.GetDisposable())
             {
                 GatherDependencies(assetPath, dependencyMap, tempList.value);
-                containsCircularDependency = ContainsCircularDependency(assetPath, dependencyMap, tempList.value);    
+                containsCircularDependency = ContainsCircularDependency(assetPath, dependencyMap, tempList.value);
             }
-            
+
             descendentGuids = new HashSet<string>();
             GatherDescendents(assetPath, descendentGuids, dependencyMap);
         }
-        
+
         static void GatherDependencies(string assetPath, Dictionary<string, string[]> dependencyMap, List<string> dependencies)
         {
             if (!dependencyMap.ContainsKey(assetPath))
@@ -260,7 +259,7 @@ namespace UnityEditor.ShaderGraph
             {
                 return true;
             }
-            
+
             ancestors.Add(assetPath);
             foreach (var dependencyPath in dependencyMap[assetPath])
             {

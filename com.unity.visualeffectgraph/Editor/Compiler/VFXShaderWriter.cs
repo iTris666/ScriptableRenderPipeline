@@ -27,6 +27,13 @@ namespace UnityEditor.VFX
 
     class VFXShaderWriter
     {
+        public VFXShaderWriter()
+        {}
+
+        public VFXShaderWriter(string initialValue)
+        {
+            builder.Append(initialValue);
+        }
         public static string GetValueString(VFXValueType type, object value)
         {
             var format = "";
@@ -212,8 +219,10 @@ namespace UnityEditor.VFX
         {
             foreach (var texture in mapper.textures)
             {
-                WriteLineFormat("{0} {1};", VFXExpression.TypeToCode(texture.valueType), mapper.GetName(texture));
-                WriteLineFormat("SamplerState sampler{0};", mapper.GetName(texture));
+                string name = mapper.GetName(texture);
+                WriteLineFormat("{0} {1};", VFXExpression.TypeToCode(texture.valueType),name);
+                WriteLineFormat("SamplerState sampler{0};", name);
+                WriteLineFormat("float4 {0}_TexelSize;", name);
             }
         }
 
@@ -382,6 +391,21 @@ namespace UnityEditor.VFX
 
             WriteFormat("{0} ", VFXExpression.TypeToCode(type));
             WriteAssignement(type, variableName, value);
+        }
+
+        public void WriteDeclaration(VFXValueType type, string variableName)
+        {
+            if (!VFXExpression.IsTypeValidOnGPU(type))
+                throw new ArgumentException(string.Format("Invalid GPU Type: {0}", type));
+
+            WriteFormat("{0} {1};\n", VFXExpression.TypeToCode(type), variableName);
+        }
+        public void WriteDeclaration(VFXValueType type, string variableName,string semantic)
+        {
+            if (!VFXExpression.IsTypeValidOnGPU(type))
+                throw new ArgumentException(string.Format("Invalid GPU Type: {0}", type));
+
+            WriteFormat("nointerpolation {0} {1} : {2};\n", VFXExpression.TypeToCode(type), variableName,semantic);
         }
 
         public void WriteVariable(VFXExpression exp, Dictionary<VFXExpression, string> variableNames)
