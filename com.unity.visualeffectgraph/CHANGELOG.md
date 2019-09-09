@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Moved High Definition templates and includes to com.unity.render-pipelines.high-definition package
 - Navigation commands for subgraph.
 - Allow choosing the place to save vfx subgraph.
-- Shadergraph integration into vfx
+- Integrated Shader Graph with Visual Effect Graph.
 
 ### Fixed
 - Using struct as subgraph parameters.
