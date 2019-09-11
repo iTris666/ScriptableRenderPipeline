@@ -279,7 +279,7 @@ namespace UnityEditor.VFX.UI
         {
             viewController.graph.ForEachSettingUsingAttributeInModel(model, f =>
             {
-                string attribute = (string)f.GetValue(model);
+                string attribute = (string)f.value;
 
                 if (viewController.graph.HasCustomAttribute(attribute) && !customAttributes.Any(t => t.name == attribute))
                 {

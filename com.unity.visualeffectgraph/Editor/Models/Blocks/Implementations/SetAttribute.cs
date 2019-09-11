@@ -18,7 +18,7 @@ namespace UnityEditor.VFX.Block
 
             foreach (var attribute in attributes)
             {
-                var attributeRefSize = VFXExpressionHelper.GetSizeOfType(VFXAttribute.Find(attribute).type);
+                var attributeRefSize = VFXExpressionHelper.GetSizeOfType(VFXAttribute.Find(attribute, null).type) ;
                 foreach (var random in randoms)
                 {
                     foreach (var source in sources)
@@ -69,7 +69,7 @@ namespace UnityEditor.VFX.Block
         }
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), StringProvider(typeof(ReadWritableAttributeProvider))]
-        public string attribute = VFXAttribute.AllIncludingVariadic.First();
+        public string attribute = VFXAttribute.StaticIncludingVariadic.First();
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector)]
         public AttributeCompositionMode Composition = AttributeCompositionMode.Overwrite;

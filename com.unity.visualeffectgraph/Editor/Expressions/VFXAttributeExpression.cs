@@ -184,6 +184,11 @@ namespace UnityEditor.VFX
 
             return exist;
         }
+        public string GetNameInCode(VFXAttributeLocation location)
+        {
+            string structName = location == VFXAttributeLocation.Source ? "sourceAttributes" : "attributes";
+            return String.Format("{0}.{1}", structName, name);
+        }
 
         public string name;
         public VFXValue value;
@@ -286,12 +291,12 @@ namespace UnityEditor.VFX
                 return false;
 
             var other = (VFXAttributeExpression)obj;
-            return valueType == other.valueType && attributeLocation == other.attributeLocation && attributeName == other.attributeName && m_attribute.value.GetContent().Equals(other.m_attribute.value.GetContent());
+            return valueType == other.valueType && attributeLocation == other.attributeLocation && attributeName == other.attributeName;
         }
 
         protected override int GetInnerHashCode()
         {
-            return (((m_attribute.value.GetContent().GetHashCode() * 397) ^ attributeName.GetHashCode()) * 397) ^ attributeLocation.GetHashCode();
+            return (attributeName.GetHashCode() * 397) ^ attributeLocation.GetHashCode();
         }
 
         sealed protected override VFXExpression Evaluate(VFXExpression[] constParents)

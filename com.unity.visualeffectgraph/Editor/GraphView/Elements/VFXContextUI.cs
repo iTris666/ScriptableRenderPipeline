@@ -222,9 +222,6 @@ namespace UnityEditor.VFX.UI
             foreach (var outEdge in m_FlowOutputConnectorContainer.Children().OfType<VFXFlowAnchor>().SelectMany(t => t.connections))
                 outEdge.UpdateEdgeControl();
 
-            VisualElement nodeBorder = this.Q(name: "node-border");
-            nodeBorder.cacheAsBitmap = false;
-
             RefreshContext();
         }
 
@@ -241,7 +238,6 @@ namespace UnityEditor.VFX.UI
             AddToClassList("selectable");
 
             this.mainContainer.style.overflow = Overflow.Visible;
-            this.cacheAsBitmap = false;
 
 
             m_Divider = this.mainContainer.Q("divider");
@@ -653,7 +649,7 @@ namespace UnityEditor.VFX.UI
 
             using (var growContext = new GrowContext(this))
             {
-                controller.AddBlock(blockIndex, descriptor.CreateInstance());
+                controller.AddBlock(blockIndex, descriptor.CreateInstance(), true /* freshly created block, should init space */);
             }
         }
 

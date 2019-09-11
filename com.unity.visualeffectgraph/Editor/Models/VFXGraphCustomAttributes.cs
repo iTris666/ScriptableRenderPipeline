@@ -2,9 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor.Experimental.VFX;
+using UnityEditor.VFX;
 using UnityEngine;
-using UnityEngine.Experimental.VFX;
+using UnityEngine.VFX;
 using UnityEngine.Profiling;
 using System.Reflection;
 
@@ -101,7 +101,7 @@ namespace UnityEditor.VFX
         {
             ForEachSettingUsingAttribute((model, setting) =>
             {
-                if (attributeName == (string)setting.GetValue(model))
+                if (attributeName == (string)setting.value)
                 {
                     VFXOperator ope = model as VFXOperator;
 
@@ -182,7 +182,7 @@ namespace UnityEditor.VFX
             string name = m_CustomAttributes[index].name;
             ForEachSettingUsingAttribute((model, setting) =>
             {
-                if (name == (string)setting.GetValue(model))
+                if (name == (string)setting.value)
                     model.Invalidate(InvalidationCause.kSettingChanged);
                 return false;
             });
@@ -221,7 +221,7 @@ namespace UnityEditor.VFX
         {
             // Restore lost custom attributes that are used somewhere in the graph
             ForEachSettingUsingAttribute((m,f)=>{
-                string customAttribute = (string) f.GetValue(m);
+                string customAttribute = (string) f.value;
                 if(!customAttributes.Any(t => t == customAttribute) && ! VFXAttribute.StaticIncludingVariadic.Any(t => t == customAttribute))
                 {
                     // trying to find the right type
@@ -249,15 +249,15 @@ namespace UnityEditor.VFX
 
 
         //Execute action on each settings used to store an attribute, until one return true;
-        public bool ForEachSettingUsingAttributeInModel(VFXModel model, Func<FieldInfo,bool> action)
+        public bool ForEachSettingUsingAttributeInModel(VFXModel model, Func<VFXSetting,bool> action)
         {
             var settings = model.GetSettings(true);
 
             foreach (var setting in settings)
             {
-                if (setting.FieldType == typeof(string))
+                if (setting.field.FieldType == typeof(string))
                 {
-                    var attribute = setting.GetCustomAttributes().OfType<StringProviderAttribute>().FirstOrDefault();
+                    var attribute = setting.field.GetCustomAttributes().OfType<StringProviderAttribute>().FirstOrDefault();
                     if (attribute != null && (typeof(ReadWritableAttributeProvider).IsAssignableFrom(attribute.providerType) || typeof(AttributeProvider).IsAssignableFrom(attribute.providerType)))
                     {
                         if (action(setting))
@@ -268,7 +268,7 @@ namespace UnityEditor.VFX
 
             return false;
         }
-        bool ForEachSettingUsingAttribute(Func<VFXModel,FieldInfo, bool> action)
+        bool ForEachSettingUsingAttribute(Func<VFXModel,VFXSetting, bool> action)
         {
             foreach (var child in children)
             {
@@ -294,16 +294,16 @@ namespace UnityEditor.VFX
 
         public bool HasCustomAttributeUses(string name)
         {
-            return ForEachSettingUsingAttribute((model,setting)=> name == (string)setting.GetValue(model));
+            return ForEachSettingUsingAttribute((model,setting)=> name == (string)setting.value);
         }
 
         public void RenameAttribute(string oldName,string newName)
         {
             ForEachSettingUsingAttribute((model, setting) =>
             {
-                if (oldName == (string)setting.GetValue(model))
+                if (oldName == (string)setting.value)
                 {
-                    setting.SetValue(model, newName);
+                    setting.value = newName;
                     model.Invalidate(InvalidationCause.kSettingChanged);
                 }
                 return false;
@@ -321,7 +321,7 @@ namespace UnityEditor.VFX
 
             ForEachSettingUsingAttribute((model, setting) =>
             {
-                if (name == (string)setting.GetValue(model))
+                if (name == (string)setting.value)
                     modelUsingAttributes.Add(model);
                 return false;
             });

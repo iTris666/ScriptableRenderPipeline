@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityEngine.Experimental.VFX;
+using UnityEngine.VFX;
 
 namespace UnityEditor.VFX.UI
 {
@@ -230,7 +230,6 @@ namespace UnityEditor.VFX.UI
             SetPosition(BoardPreferenceHelper.LoadPosition(BoardPreferenceHelper.Board.customAttributeBoard, defaultRect));
 
             style.overflow = Overflow.Hidden;
-            cacheAsBitmap = false;
 
             var header = this.Q("header");
 

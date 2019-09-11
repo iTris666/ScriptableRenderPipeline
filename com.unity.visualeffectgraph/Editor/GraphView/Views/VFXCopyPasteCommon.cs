@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor.VFX;
 using UnityEngine.UIElements;
+using UnityEngine.VFX;
 using System.Reflection;
 using UnityObject = UnityEngine.Object;
 using NodeID = System.UInt32;

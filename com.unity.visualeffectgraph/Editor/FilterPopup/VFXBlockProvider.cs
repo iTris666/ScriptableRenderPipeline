@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEditor.VFX;
 
@@ -198,8 +199,9 @@ namespace UnityEditor.VFX.UI
                                 (((SubGraphCache.AdditionalBlockInfo)t.additionalInfos).compatibleType & m_ContextController.model.contextType) != 0  &&
                                 (((SubGraphCache.AdditionalBlockInfo)t.additionalInfos).compatibleData & m_ContextController.model.ownedType) != 0
                                 ).Select(t=> (Descriptor)new SubgraphBlockDescriptor(t)));
-var extras = GetModelsWithGraphVariants<VFXBlock>(m_ContextController.viewController.graph, ref blockTypesWithGraphVariants);
-            var blockList = filteredBlocks.Concat(extras).ToList();
+
+            var extras = GetModelsWithGraphVariants<VFXBlock>(m_ContextController.viewController.graph, ref blockTypesWithGraphVariants);
+            var blockList = filteredBlocks.Concat(extras.Select(t => (Descriptor)new NewBlockDescriptor(t))).ToList();
 
             blockList.Sort((blockA, blockB) =>
             {

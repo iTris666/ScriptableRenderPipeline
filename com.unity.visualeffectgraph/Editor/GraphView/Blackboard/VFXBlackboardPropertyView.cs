@@ -264,7 +264,7 @@ namespace  UnityEditor.VFX.UI
                 m_RangeProperty = null;
                 if (m_TooltipProperty == null)
                 {
-                    m_TooltipProperty = new StringPropertyRM(new SimplePropertyRMProvider<string>("Tooltip", () => controller.model.tooltip, t => controller.model.tooltip = t), 55);
+                    m_TooltipProperty = new StringPropertyRM(new SimplePropertyRMProvider<string>("Tooltip", () => controller.model.tooltip, t => controller.model.tooltip = t, controller.model.GetGraph()), 55);
                 }
                 Insert(insertIndex++, m_TooltipProperty);
             }

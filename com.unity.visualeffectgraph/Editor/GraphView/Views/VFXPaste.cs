@@ -23,6 +23,11 @@ namespace UnityEditor.VFX.UI
         int firstCopiedGroup = -1;
         int firstCopiedStickyNote = -1;
         static VFXPaste s_Instance = null;
+        VFXViewController viewController;
+        VFXNodeID[] m_NodesInTheSameOrder = null;
+
+        HashSet<VFXNodeUI> newNodesUI = new HashSet<VFXNodeUI>();
+        HashSet<VFXContextUI> newContextUIs = new HashSet<VFXContextUI>();
 
         public static void UnserializeAndPasteElements(VFXViewController viewController, Vector2 center, string data, VFXView view = null, VFXGroupNodeController groupNode = null)
         {
@@ -115,17 +120,17 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        private int PasteBlocks(VFXViewController viewController, Node[] blocks, VFXContext targetModelContext, int targetIndex,List<VFXBlockController> blocksInTheSameOrder = null)
+        private int PasteBlocks(VFXViewController viewController, Node[] blocks, VFXContext targetModelContext, int targetIndex, List<VFXBlockController> blocksInTheSameOrder = null)
         {
             newControllers.Clear();
             var newBlocks = new HashSet<VFXBlock>();
             m_NodesInTheSameOrder = new VFXNodeID[blocks.Length];
             int cpt = 0;
 
-            foreach (var block in serializableGraph.operators)
+            foreach (var block in blocks)
             {
                 Node blk = block;
-                VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(viewController, ref blk,targetModelContext, targetIndex);
+                VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(ref blk);
 
                 if (newBlock != null)
                 {
@@ -140,22 +145,21 @@ namespace UnityEditor.VFX.UI
             }
 
 
-            var targetContextController = viewController.GetRootNodeController(targetModelContext, 0)as VFXContextController;
+            var targetContextController = viewController.GetRootNodeController(targetModelContext, 0) as VFXContextController;
             targetContextController.ApplyChanges();
 
-            if ( blocksInTheSameOrder != null)
+            if (blocksInTheSameOrder != null)
             {
                 blocksInTheSameOrder.Clear();
                 for (int i = 0; i < m_NodesInTheSameOrder.Length; ++i)
-            {
-                    blocksInTheSameOrder.Add(m_NodesInTheSameOrder[i].model != null ? targetContextController.blockControllers.First(t=>t.model == m_NodesInTheSameOrder[i].model as VFXBlock): null);
+                {
+                    blocksInTheSameOrder.Add(m_NodesInTheSameOrder[i].model != null ? targetContextController.blockControllers.First(t => t.model == m_NodesInTheSameOrder[i].model as VFXBlock) : null);
+                }
             }
             return targetIndex;
         }
-        VFXViewController viewController;
-        VFXNodeID[] m_NodesInTheSameOrder = null;
 
-        void PasteAll(VFXViewController viewController, Vector2 center, ref SerializableGraph serializableGraph, VFXView view, VFXGroupNodeController groupNode)
+        void PasteAll(VFXViewController viewController, Vector2 center, ref SerializableGraph serializableGraph, VFXView view, VFXGroupNodeController groupNode,List<VFXNodeController> nodesInTheSameOrder)
         {
             newControllers.Clear();
 
@@ -431,11 +435,11 @@ namespace UnityEditor.VFX.UI
 
             viewController.graph.ForEachSettingUsingAttributeInModel(model, f =>
             {
-                string attribute = (string)f.GetValue(model);
+                string attribute = (string)f.value;
 
                 if(changedCustomAttributesNames.ContainsKey(attribute))
                 {
-                    f.SetValue(model, changedCustomAttributesNames[attribute]);
+                    f.value = changedCustomAttributesNames[attribute];
                 }
 
                 return false;
@@ -444,10 +448,8 @@ namespace UnityEditor.VFX.UI
 
         }
 
-        HashSet<VFXNodeUI> newNodesUI = new HashSet<VFXNodeUI>();
-        HashSet<VFXContextUI> newContextUIs = new HashSet<VFXContextUI>();
 
-        private void SelectCopiedElements(VFXView view, VFXGroupNodeController groupNode)
+        void SelectCopiedElements(VFXView view, VFXGroupNodeController groupNode)
         {
             view.ClearSelection();
 
@@ -475,7 +477,7 @@ namespace UnityEditor.VFX.UI
             SelectStickyNotes(view, elements);
         }
 
-        private void SelectGroupNodes(VFXView view, List<Experimental.GraphView.GraphElement> elements)
+        void SelectGroupNodes(VFXView view, List<Experimental.GraphView.GraphElement> elements)
         {
             if (firstCopiedGroup >= 0)
             {
@@ -494,7 +496,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        private void SelectStickyNotes(VFXView view, List<Experimental.GraphView.GraphElement> elements)
+        void SelectStickyNotes(VFXView view, List<Experimental.GraphView.GraphElement> elements)
         {
             //Select all groups that are new
             if (firstCopiedStickyNote >= 0)
@@ -509,7 +511,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        private void SelectEdges(VFXView view, List<Experimental.GraphView.GraphElement> elements)
+        void SelectEdges(VFXView view, List<Experimental.GraphView.GraphElement> elements)
         {
             // Simply selected all data edge with the context or slot container, they can be no other than the copied ones
             foreach (var dataEdge in elements.OfType<VFXDataEdge>())
@@ -529,7 +531,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        private void FindParameterUIsAndSelect(VFXView view, List<Experimental.GraphView.GraphElement> elements)
+        void FindParameterUIsAndSelect(VFXView view, List<Experimental.GraphView.GraphElement> elements)
         {
             foreach (var param in newControllers.Values.OfType<VFXParameterNodeController>())
             {
@@ -541,7 +543,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        private void FindOperatorsUIsAndSelect(VFXView view, List<Experimental.GraphView.GraphElement> elements)
+        void FindOperatorsUIsAndSelect(VFXView view, List<Experimental.GraphView.GraphElement> elements)
         {
             foreach (var slotContainer in newControllers.Values.OfType<VFXOperatorController>())
             {
@@ -554,7 +556,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        private void FindContextUIsAndSelect(VFXView view, List<Experimental.GraphView.GraphElement> elements)
+        void FindContextUIsAndSelect(VFXView view, List<Experimental.GraphView.GraphElement> elements)
         {
             foreach (var slotContainer in newContexts.Select(t => t.Key).OfType<VFXContext>())
             {
@@ -572,7 +574,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        private void MakePasteOffsetUnique( SerializableGraph serializableGraph)
+        void MakePasteOffsetUnique( SerializableGraph serializableGraph)
         {
             // look if pasting there will result in the first element beeing exactly on top of other
             while (true)
@@ -777,7 +779,7 @@ namespace UnityEditor.VFX.UI
                 foreach (var context in serializableGraph.contexts)
                 {
                     var ctx = context;
-                    PasteContext( ref ctx);
+                    PasteContext(viewController, ref ctx);
                 }
             }
         }

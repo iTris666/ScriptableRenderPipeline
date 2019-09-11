@@ -195,7 +195,7 @@ namespace UnityEditor.VFX.UI
 
             void CopyPasteNodes()
             {
-                object result = VFXCopy.Copy(m_SourceControllers, m_Rect);
+                object result = VFXCopy.Copy(m_SourceController,m_SourceControllers, m_Rect);
 
                 VFXPaste.Paste(m_TargetController, m_Rect.center, result, null, null, m_TargetControllers);
                 List<VFXParameterController> targetParameters = new List<VFXParameterController>();
