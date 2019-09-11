@@ -18,6 +18,8 @@ namespace UnityEditor.VFX
 
     struct VFXAttribute
     {
+        static Dictionary<string, VFXValue> s_AttributeValues = new Dictionary<string, VFXValue>();
+
         public static readonly float kDefaultSize = 0.1f;
 
         public static readonly VFXAttribute Seed                = new VFXAttribute("seed", VFXValueType.Uint32);
@@ -117,9 +119,10 @@ namespace UnityEditor.VFX
         public VFXAttribute(string name, VFXValue value, VFXVariadic variadic = VFXVariadic.False, SpaceableType space = SpaceableType.None)
         {
             this.name = name;
-            this.value = value;
             this.variadic = variadic;
             this.space = space;
+
+            this.value = value;
             if (space != SpaceableType.None && variadic != VFXVariadic.False)
             {
                 throw new InvalidOperationException("Can't mix spaceable and variadic attributes : " + name);
@@ -190,10 +193,21 @@ namespace UnityEditor.VFX
             return String.Format("{0}.{1}", structName, name);
         }
 
-        public string name;
-        public VFXValue value;
-        public VFXVariadic variadic;
-        public SpaceableType space;
+        public readonly string name;
+        public VFXValue value
+        {
+            get
+            {
+                return s_AttributeValues[name];
+            }
+            set
+            {
+                s_AttributeValues[name] = value;
+            }
+        }
+
+        public readonly VFXVariadic variadic;
+        public readonly SpaceableType space;
 
         public VFXValueType type
         {

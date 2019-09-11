@@ -130,7 +130,8 @@ namespace UnityEditor.VFX.UI
             foreach (var block in blocks)
             {
                 Node blk = block;
-                VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(ref blk);
+                VFXBlock newBlock = PasteAndInitializeNode<VFXBlock>(ref blk,targetModelContext);
+
 
                 if (newBlock != null)
                 {
@@ -316,7 +317,7 @@ namespace UnityEditor.VFX.UI
             return newContext;
         }
 
-        T PasteAndInitializeNode<T>(ref Node node) where T : VFXModel
+        T PasteAndInitializeNode<T>(ref Node node, VFXContext targetModelContext = null) where T : VFXModel
         {
             Type type = node.type;
             if (type == null)
@@ -326,7 +327,7 @@ namespace UnityEditor.VFX.UI
                 return null;
 
             var n = node;
-            PasteNode(newNode, ref n);
+            PasteNode(newNode, ref n, targetModelContext);
 
             return newNode;
         }
@@ -351,6 +352,8 @@ namespace UnityEditor.VFX.UI
             PasteModelSettings(newNode, node.settings, newNode.GetType());
 
             PatchAttributesInNode(newNode);
+
+            PasteSlotStuff(newNode, ref node);
 
             context.AddChild(newNode, index);
 
@@ -391,6 +394,8 @@ namespace UnityEditor.VFX.UI
                 if (field != null)
                     field.SetValue(model, settings[i].value.Get());
             }
+
+            model.Invalidate(VFXModel.InvalidationCause.kSettingChanged);
         }
 
         void PasteNode(VFXModel model, ref Node node, VFXContext context = null)

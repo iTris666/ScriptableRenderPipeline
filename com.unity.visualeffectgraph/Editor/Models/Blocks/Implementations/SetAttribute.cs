@@ -69,7 +69,7 @@ namespace UnityEditor.VFX.Block
         }
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), StringProvider(typeof(ReadWritableAttributeProvider))]
-        public string attribute = VFXAttribute.StaticIncludingVariadic.First();
+        public string attribute;
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector)]
         public AttributeCompositionMode Composition = AttributeCompositionMode.Overwrite;

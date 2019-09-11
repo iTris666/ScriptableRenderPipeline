@@ -141,7 +141,7 @@ namespace UnityEditor.VFX.UI
             m_View = view;
             m_DefaultRect = defaultRect;
 
-            var tpl = Resources.Load<VisualTreeAsset>("uxml/VFXBoard");
+            var tpl = VFXView.LoadUXML("VFXBoard");
 
             tpl.CloneTree(this);
 
